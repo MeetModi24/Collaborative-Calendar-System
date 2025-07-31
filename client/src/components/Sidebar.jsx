@@ -1,55 +1,87 @@
-// src/components/Sidebar.jsx
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { FaBars } from 'react-icons/fa';
 
-export default function Sidebar({ width = 250 }) {
+export default function Sidebar({ collapsed, toggleSidebar }) {
   const isAuthenticated = true;
   const currentUser = { name: 'John Doe' };
 
+  const navItemClass =
+    'sidebar-item d-flex align-items-center text-white px-3 py-2 text-decoration-none';
+
   return (
     <div
-      className="bg-dark text-white d-flex flex-column justify-content-between p-3"
-      style={{ width: `${width}px`, height: '100vh' }}
+      className="bg-dark text-white d-flex flex-column justify-content-between"
+      style={{
+        width: collapsed ? '70px' : '240px',
+        height: '100vh',
+        transition: 'width 0.3s ease',
+      }}
     >
-      {/* Logo & Nav */}
       <div>
-        <div className="d-flex align-items-center mb-4 ps-1">
-          <i className="bx bxs-dashboard fs-4 me-2"></i>
-          <h5 className="mb-0 fw-bold">Workspace</h5>
-        </div>
-
-        {/* Search */}
-        <div className="mb-4">
-          <div className="input-group input-group-sm">
-            <span className="input-group-text bg-secondary border-0 text-white">
-              <i className="bx bx-search"></i>
-            </span>
-            <input
-              type="text"
-              className="form-control bg-secondary text-white border-0"
-              placeholder="Search..."
-            />
+        {/* Hamburger */}
+        <div className="d-flex flex-column gap-2 mt-3">
+          <div
+            role="button"
+            onClick={toggleSidebar}
+            className={navItemClass}
+            style={{ cursor: 'pointer' }}
+          >
+            <FaBars className="me-2 fs-5" />
+            {!collapsed && <span className="fw-bold">Workspace</span>}
           </div>
         </div>
 
+        {/* Search */}
+        {!collapsed && (
+          <div className="px-3 mt-3 mb-2">
+            <div className="input-group input-group-sm">
+              <span className="input-group-text bg-secondary border-0 text-white">
+                <i className="bx bx-search" />
+              </span>
+              <input
+                type="text"
+                className="form-control bg-secondary text-white border-0"
+                placeholder="Search..."
+              />
+            </div>
+          </div>
+        )}
+
         {/* Nav Items */}
-        <ul className="nav flex-column gap-2">
-          <li><Link to="/calendar" className="nav-link text-white px-0 d-flex align-items-center"><i className="bx bx-calendar fs-5 me-2"></i>Calendar</Link></li>
-          <li><Link to="/create-group" className="nav-link text-white px-0 d-flex align-items-center"><i className="bx bxs-user-plus fs-5 me-2"></i>Create Group</Link></li>
-          <li><Link to="/invites" className="nav-link text-white px-0 d-flex align-items-center"><i className="bx bx-envelope fs-5 me-2"></i>Invites</Link></li>
-          <li><Link to="/profile" className="nav-link text-white px-0 d-flex align-items-center"><i className="bx bx-cog fs-5 me-2"></i>Settings</Link></li>
-        </ul>
+        <div className="d-flex flex-column gap-1 mt-2">
+          <Link to="/calendar" className={navItemClass}>
+            <i className="bx bx-calendar fs-5 me-2" />
+            {!collapsed && <span>Calendar</span>}
+          </Link>
+          <Link to="/create-group" className={navItemClass}>
+            <i className="bx bxs-user-plus fs-5 me-2" />
+            {!collapsed && <span>Create Group</span>}
+          </Link>
+          <Link to="/invites" className={navItemClass}>
+            <i className="bx bx-envelope fs-5 me-2" />
+            {!collapsed && <span>Invites</span>}
+          </Link>
+          <Link to="/profile" className={navItemClass}>
+            <i className="bx bx-cog fs-5 me-2" />
+            {!collapsed && <span>Settings</span>}
+          </Link>
+        </div>
       </div>
 
-      {/* Profile & Logout */}
+      {/* Profile */}
       {isAuthenticated && (
-        <div className="pt-3 border-top">
-          <div className="d-flex justify-content-between align-items-center">
-            <div className="d-flex align-items-center">
-              <i className="bx bx-user-circle fs-4 me-2"></i>
-              <span className="fw-semibold">{currentUser.name}</span>
-            </div>
-            <button className="btn text-white p-0"><i className="bx bx-log-out fs-4"></i></button>
+        <div className="border-top mt-3 pt-3 px-3 mb-2">
+          <div className="d-flex align-items-center justify-content-between">
+            <i className="bx bx-user-circle fs-4" />
+            {!collapsed && (
+              <>
+                <span className="fw-semibold ms-2">{currentUser.name}</span>
+                <button className="btn text-white p-0 ms-auto" title="Sign out">
+                  <i className="bx bx-log-out fs-4" />
+                </button>
+              </>
+            )}
           </div>
         </div>
       )}
