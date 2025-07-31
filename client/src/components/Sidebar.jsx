@@ -11,7 +11,6 @@ export default function Sidebar({ width = 250 }) {
       className="bg-dark text-white d-flex flex-column justify-content-between p-3"
       style={{ width: `${width}px`, height: '100vh' }}
     >
-      {/* Logo & Nav */}
       <div>
         <div className="d-flex align-items-center mb-4 ps-1">
           <i className="bx bxs-dashboard fs-4 me-2"></i>
