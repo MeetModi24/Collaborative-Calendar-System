@@ -6,9 +6,11 @@ import CalendarPage from "./pages/CalendarPage";
 import SignupPage from './pages/SignupPage';
 import SigninPage from './pages/SigninPage';
 
+import { AuthProvider } from './context/AuthContext';
 
 function App() {
   return (
+    <AuthProvider>
     <Routes>
       <Route path="/" element={<HomePage />} />
       <Route path="/calendar" element={<CalendarPage />} />
@@ -17,6 +19,7 @@ function App() {
       <Route path="/signin" element={<SigninPage />} />
 
     </Routes>
+    </AuthProvider>
   );
 }
 
