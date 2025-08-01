@@ -1,8 +1,15 @@
+// src/components/Sidebar.jsx
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { FaBars } from 'react-icons/fa';
 
-export default function Sidebar({ collapsed, toggleSidebar }) {
+export default function Sidebar({
+  collapsed,
+  toggleSidebar,
+  onCreateGroupClick,
+  onProfileSettingsClick,
+  onInvitesClick
+})  {
   const isAuthenticated = true;
   const currentUser = { name: 'John Doe' };
 
@@ -54,22 +61,34 @@ export default function Sidebar({ collapsed, toggleSidebar }) {
             <i className="bx bx-calendar fs-5 me-2" />
             {!collapsed && <span>Calendar</span>}
           </Link>
-          <Link to="/create-group" className={navItemClass}>
+
+          <button
+            onClick={onCreateGroupClick}
+            className={`${navItemClass} bg-transparent border-0 text-start w-100`}
+          >
             <i className="bx bxs-user-plus fs-5 me-2" />
             {!collapsed && <span>Create Group</span>}
-          </Link>
-          <Link to="/invites" className={navItemClass}>
+          </button>
+
+          <button
+            onClick={onInvitesClick}
+            className={`${navItemClass} bg-transparent border-0 text-start w-100`}
+          >
             <i className="bx bx-envelope fs-5 me-2" />
             {!collapsed && <span>Invites</span>}
-          </Link>
-          <Link to="/profile" className={navItemClass}>
+          </button>
+
+          <button
+            onClick={onProfileSettingsClick}
+            className={`${navItemClass} bg-transparent border-0 text-start w-100`}
+          >
             <i className="bx bx-cog fs-5 me-2" />
             {!collapsed && <span>Settings</span>}
-          </Link>
+          </button>
         </div>
       </div>
 
-      {/* Profile */}
+      {/* Profile Info */}
       {isAuthenticated && (
         <div className="border-top mt-3 pt-3 px-3 mb-2">
           <div className="d-flex align-items-center justify-content-between">

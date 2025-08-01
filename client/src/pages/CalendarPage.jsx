@@ -11,6 +11,8 @@ import "bootstrap-icons/font/bootstrap-icons.min.css";
 
 import "../styles/calendar.css"; // your custom overrides
 
+import CreateGroupModal from "../components/CreateGroupModal";
+import AppLayout from '../components/AppLayout'; 
 
 export default function CalendarPage() {
   const calendarRef = useRef(null);
@@ -25,6 +27,10 @@ export default function CalendarPage() {
   // Modals
   const [showAddModal, setShowAddModal] = useState(false);
   const [showViewModal, setShowViewModal] = useState(false);
+
+  // Group Create Modal states
+  const [showCreateGroupModal, setShowCreateGroupModal] = useState(false);
+
 
   // New Event Data
   const [newEvent, setNewEvent] = useState({
@@ -49,6 +55,7 @@ export default function CalendarPage() {
     setCurrentEvent(info.event);
     setShowViewModal(true);
   };
+  
 
   // Save new event
   const handleSaveEvent = () => {
@@ -93,6 +100,7 @@ export default function CalendarPage() {
   };
 
   return (
+   <AppLayout>
     <div className="container py-4">
       <div className="calendar-container bg-white rounded shadow p-4">
         {/* Header */}
@@ -126,6 +134,10 @@ export default function CalendarPage() {
           eventClick={handleEventClick}
         />
       </div>
+
+      {/* {Group Create Modal} */}
+
+      <CreateGroupModal show={showCreateGroupModal} onClose={() => setShowCreateGroupModal(false)} />
 
       {/* Add Event Modal */}
       {showAddModal && (
@@ -187,5 +199,6 @@ export default function CalendarPage() {
         </div>
       )}
     </div>
+    </AppLayout>
   );
 }
