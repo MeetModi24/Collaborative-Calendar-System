@@ -55,3 +55,27 @@ def user_profile():
         except Exception as e:
             db.session.rollback()
             return jsonify({'error': 'Unable to update profile settings'}), 500
+
+@auth_bp.route('/signin', methods=['POST'])
+def signin_api():
+    data = request.get_json() # This 'data' dictionary will now contain 'remember_me': true/false from React
+
+    form = SignInForm()
+    # This line is key! It automatically takes the 'remember_me' key from the 'data' dictionary
+    # and populates form.remember_me.data with its boolean value.
+    form.process(data=data)
+
+    if not form.validate():
+        return jsonify(errors=form.errors), 400
+
+    user = User.query.filter_by(email=form.email.data.strip().lower()).first()
+
+    if not user or not check_password_hash(user.password, form.password.data):
+        return jsonify(error="Invalid email or password."), 401
+
+    # This is where the 'remember_me' value is used.
+    # login_user expects a boolean for its 'remember' argument.
+    # form.remember_me.data provides exactly that.
+    login_user(user, remember=form.remember_me.data)
+
+    return jsonify(message="Logged in successfully", isAuthenticated=True), 200
