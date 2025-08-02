@@ -11,10 +11,7 @@ class Config:
     TESTING = False
 
     # For React + Flask session cookie compatibility
-    SESSION_COOKIE_SAMESITE = "Lax"   # Use "None" if on HTTPS
-    SESSION_COOKIE_SECURE = False     # Use True if using HTTPS
-
-    CORS_HEADERS = 'Content-Type'
     SESSION_COOKIE_HTTPONLY = True
-    SESSION_COOKIE_SAMESITE = 'Lax'
+    SESSION_COOKIE_SAMESITE = "None"   # Required for cross-site cookies (React frontend)
+    SESSION_COOKIE_SECURE = False      # Keep False in local dev, True in production with HTTPS
     PERMANENT_SESSION_LIFETIME = timedelta(days=7)

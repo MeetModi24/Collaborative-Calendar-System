@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify
-from werkzeug.security import generate_password_hash
+from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import login_user, login_required, current_user, logout_user
 
 from server.models import User
@@ -7,7 +7,7 @@ from server.extensions import db
 
 auth_bp = Blueprint('auth', __name__)
 
-# 1 /api/auth/status — Check if user is logged in
+# 1) Check login status
 @auth_bp.route('/status', methods=['GET'])
 def auth_status():
     if current_user.is_authenticated:
@@ -21,7 +21,7 @@ def auth_status():
         return jsonify({'isAuthenticated': False}), 200
 
 
-# 2/api/auth/logout — Logout the user
+# 2) Logout
 @auth_bp.route('/logout', methods=['POST'])
 @login_required
 def logout():
@@ -29,7 +29,7 @@ def logout():
     return jsonify({'success': True, 'message': 'Logged out'}), 200
 
 
-# 3/api/auth/user_profile — GET & POST for profile data
+# 3) User profile - GET & POST
 @auth_bp.route('/user_profile', methods=['GET', 'POST'])
 @login_required
 def user_profile():
@@ -52,30 +52,66 @@ def user_profile():
 
             db.session.commit()
             return jsonify(success=True), 200
-        except Exception as e:
+        except Exception:
             db.session.rollback()
             return jsonify({'error': 'Unable to update profile settings'}), 500
 
+
+# 4) ✅ SIGNUP (New User Registration)
+@auth_bp.route('/signup', methods=['POST'])
+def signup():
+    data = request.get_json()
+
+    # Validate input
+    if not data.get('name') or not data.get('email') or not data.get('password'):
+        return jsonify({'error': 'All fields are required'}), 400
+
+    # Check if email already exists
+    existing_user = User.query.filter_by(email=data['email'].strip().lower()).first()
+    if existing_user:
+        return jsonify({'error': 'This email already exists. Please sign in'}), 400
+
+    # Create new user
+    hashed_password = generate_password_hash(data['password'])
+    new_user = User(
+        name=data['name'].strip(),
+        email=data['email'].strip().lower(),
+        password=hashed_password
+    )
+
+    try:
+        db.session.add(new_user)
+        db.session.commit()
+        login_user(new_user, remember=False)
+        return jsonify({'success': True, 'message': 'User registered successfully'}), 201
+    except Exception:
+        db.session.rollback()
+        return jsonify({'error': 'Unable to create user'}), 500
+
+
+# 5) ✅ SIGNIN (Login Existing User)
 @auth_bp.route('/signin', methods=['POST'])
-def signin_api():
-    data = request.get_json() # This 'data' dictionary will now contain 'remember_me': true/false from React
+def signin():
+    data = request.get_json()
 
-    form = SignInForm()
-    # This line is key! It automatically takes the 'remember_me' key from the 'data' dictionary
-    # and populates form.remember_me.data with its boolean value.
-    form.process(data=data)
+    if not data.get('email') or not data.get('password'):
+        return jsonify({'error': 'Email and password are required'}), 400
 
-    if not form.validate():
-        return jsonify(errors=form.errors), 400
+    user = User.query.filter_by(email=data['email'].strip().lower()).first()
 
-    user = User.query.filter_by(email=form.email.data.strip().lower()).first()
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
 
-    if not user or not check_password_hash(user.password, form.password.data):
-        return jsonify(error="Invalid email or password."), 401
+    if not check_password_hash(user.password, data['password']):
+        return jsonify({'error': 'Incorrect password'}), 401
 
-    # This is where the 'remember_me' value is used.
-    # login_user expects a boolean for its 'remember' argument.
-    # form.remember_me.data provides exactly that.
-    login_user(user, remember=form.remember_me.data)
-
-    return jsonify(message="Logged in successfully", isAuthenticated=True), 200
+    login_user(user, remember=True)
+    return jsonify({
+        'success': True,
+        'message': 'Logged in successfully',
+        'user': {
+            'user_id': user.user_id,
+            'name': user.name,
+            'email': user.email
+        }
+    }), 200

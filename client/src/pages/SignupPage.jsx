@@ -11,6 +11,7 @@ export default function SignupPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [errors, setErrors] = useState({});
+  const [serverMessage, setServerMessage] = useState('');
 
   const handleChange = (e) =>
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -38,11 +39,49 @@ export default function SignupPage() {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (validate()) {
-      console.log('Signing up with', formData);
-      // Add fetch/axios call to backend here
+    setServerMessage('');
+
+    if (!validate()) return;
+
+    try {
+      console.log("📤 Sending signup request...", formData);
+
+      const response = await fetch('http://127.0.0.1:5000/api/auth/signup', {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: formData.name,
+          email: formData.email,
+          password: formData.password,
+        }),
+      });
+
+      console.log("✅ Response received:", response);
+
+      let data;
+      try {
+        data = await response.json();
+        console.log("📥 Parsed response:", data);
+      } catch (parseError) {
+        console.error("❌ Failed to parse JSON:", parseError);
+        setServerMessage('Invalid server response');
+        return;
+      }
+
+      if (response.ok) {
+        setServerMessage(data.message || 'Signup successful');
+        setFormData({ name: '', email: '', password: '', confirmPassword: '' });
+      } else {
+        setServerMessage(data.error || 'Signup failed');
+      }
+    } catch (error) {
+      console.error("❌ Fetch error:", error);
+      setServerMessage('An error occurred. Please try again.');
     }
   };
 
@@ -51,6 +90,13 @@ export default function SignupPage() {
       <div className="container mt-5" style={{ width: '70%' }}>
         <form onSubmit={handleSubmit} className="shadow p-3 mb-5 bg-body rounded">
           <legend>Sign Up</legend>
+
+          {serverMessage && (
+            <div className={`alert 
+              ${serverMessage.toLowerCase().includes('success') ? 'alert-success' : 'alert-danger'}`}>
+              {serverMessage}
+            </div>
+          )}
 
           <label className="form-label">Name</label>
           <input
@@ -86,9 +132,7 @@ export default function SignupPage() {
             onChange={handleChange}
             required
           />
-          {errors.password && (
-            <div className="invalid-feedback">{errors.password}</div>
-          )}
+          {errors.password && <div className="invalid-feedback">{errors.password}</div>}
           <div className="form-check">
             <input
               className="form-check-input"
@@ -111,9 +155,7 @@ export default function SignupPage() {
             onChange={handleChange}
             required
           />
-          {errors.confirmPassword && (
-            <div className="invalid-feedback">{errors.confirmPassword}</div>
-          )}
+          {errors.confirmPassword && <div className="invalid-feedback">{errors.confirmPassword}</div>}
           <div className="form-check">
             <input
               className="form-check-input"
