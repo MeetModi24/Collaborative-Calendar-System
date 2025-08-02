@@ -11,3 +11,18 @@ This project enables users to:
 - Optimize performance through local caching
 - Prevent conflicts via version-controlled concurrency mechanisms
 
+Creating Database:
+python create_database.py
+
+Starting Flask:
+$env:FLASK_APP="server.app"
+$env:FLASK_ENV="development"
+flask run
+
+Backend testing:
+Invoke-RestMethod -Uri "http://127.0.0.1:5000/api/auth/signup" `
+-Method POST `
+-Headers @{ "Content-Type" = "application/json" } `
+-Body '{"name": "Test User", "email": "testuser@test.com", "password": "Test@1234"}'
+
+
