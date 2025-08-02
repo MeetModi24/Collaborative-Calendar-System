@@ -22,7 +22,7 @@ def create_app():
 
     login_manager.login_view = 'auth.signin'  # We'll define this in blueprint later
 
-    # Register Blueprints (to be created separately)
+    # Register Blueprints
     from .routes.auth_routes import auth_bp
     from .routes.event_routes import event_bp
     from .routes.group_routes import group_bp

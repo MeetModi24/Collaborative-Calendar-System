@@ -1,7 +1,8 @@
 // src/components/Sidebar.jsx
-import React from 'react';
+import React, { useContext } from 'react';
 import { Link } from 'react-router-dom';
 import { FaBars } from 'react-icons/fa';
+import { AuthContext } from '../context/AuthContext';
 
 export default function Sidebar({
   collapsed,
@@ -9,9 +10,12 @@ export default function Sidebar({
   onCreateGroupClick,
   onProfileSettingsClick,
   onInvitesClick
-})  {
-  const isAuthenticated = true;
-  const currentUser = { name: 'John Doe' };
+}) {
+  const {
+    currentUser,
+    isAuthenticated,
+    logout,
+  } = useContext(AuthContext);
 
   const navItemClass =
     'sidebar-item d-flex align-items-center text-white px-3 py-2 text-decoration-none';
@@ -95,8 +99,12 @@ export default function Sidebar({
             <i className="bx bx-user-circle fs-4" />
             {!collapsed && (
               <>
-                <span className="fw-semibold ms-2">{currentUser.name}</span>
-                <button className="btn text-white p-0 ms-auto" title="Sign out">
+                <span className="fw-semibold ms-2">{currentUser?.name || 'User'}</span>
+                <button
+                  className="btn text-white p-0 ms-auto"
+                  title="Sign out"
+                  onClick={logout}
+                >
                   <i className="bx bx-log-out fs-4" />
                 </button>
               </>

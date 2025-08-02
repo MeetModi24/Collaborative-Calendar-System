@@ -1,24 +1,64 @@
 // src/components/ProfileSettingsModal.jsx
-import React, { useState } from 'react';
+import React, { useState, useContext, useEffect } from 'react';
 import Modal from 'react-bootstrap/Modal';
 import Button from 'react-bootstrap/Button';
+import { useNavigate } from 'react-router-dom';
+import { AuthContext } from '../context/AuthContext';
 
 export default function ProfileSettingsModal({ show, onClose }) {
+  const { currentUser, isAuthenticated, updateProfile } = useContext(AuthContext);
+  const navigate = useNavigate();
+
   const [form, setForm] = useState({
-    name: 'Meet Modi',
-    email: 'hyenalaughs707@gmail.com',
+    name: '',
+    email: '',
     password: '',
   });
 
   const [showPassword, setShowPassword] = useState(false);
 
+  // Redirect if modal is opened by unauthenticated user
+  useEffect(() => {
+    if (show && !isAuthenticated) {
+      alert("You must be logged in to access profile settings.");
+      onClose();
+      navigate('/signin');
+    }
+  }, [isAuthenticated, show]);
+
+  // Populate form with current user data when modal opens
+  useEffect(() => {
+    if (currentUser) {
+      setForm({
+        name: currentUser.name || '',
+        email: currentUser.email || '',
+        password: '',
+      });
+    }
+  }, [currentUser, show]);
+
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = () => {
-    // TODO: Submit logic
-    onClose();
+  const handleSubmit = async () => {
+    if (!form.name.trim() || !form.email.trim() || !form.password.trim()) {
+      alert("All fields are required.");
+      return;
+    }
+
+    const res = await updateProfile({
+      name: form.name,
+      email: form.email,
+      password: form.password,
+    });
+
+    if (res.success) {
+      alert("Profile updated successfully.");
+      onClose();
+    } else {
+      alert(res.error || "Failed to update profile.");
+    }
   };
 
   return (

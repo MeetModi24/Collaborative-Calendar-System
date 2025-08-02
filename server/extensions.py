@@ -3,4 +3,4 @@ from flask_login import LoginManager
 
 db = SQLAlchemy()
 login_manager = LoginManager()
-login_manager.login_view = 'signin'
+login_manager.login_view = 'auth.signin'  # for redirect, but won't be used with React

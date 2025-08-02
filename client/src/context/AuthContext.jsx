@@ -9,14 +9,13 @@ export const AuthProvider = ({ children }) => {
   const [currentUser, setCurrentUser] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [inviteCount, setInviteCount] = useState(0);
-  const [loading, setLoading] = useState(true); // Optional
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Fetch user authentication status from Flask backend
     const fetchAuthStatus = async () => {
       try {
         const response = await fetch('/api/auth/status', {
-          credentials: 'include', // crucial to include session cookies!
+          credentials: 'include',
         });
         const data = await response.json();
 
@@ -37,7 +36,7 @@ export const AuthProvider = ({ children }) => {
     fetchAuthStatus();
   }, []);
 
-  // Optional: Logout function (can be used in Sidebar later)
+  // 🔒 Logout Function
   const logout = async () => {
     try {
       await fetch('/api/auth/logout', {
@@ -51,6 +50,29 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // 🛠 Profile Update Function
+  const updateProfile = async ({ name, email, password }) => {
+    try {
+        const res = await fetch('/api/auth/user_profile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ name, email, password }),
+        });
+
+        if (res.ok) {
+        setCurrentUser((prev) => ({ ...prev, name, email }));
+        return { success: true };
+        } else {
+        const error = await res.json();
+        return { success: false, error: error.error || 'Update failed' };
+        }
+    } catch (err) {
+        return { success: false, error: err.message };
+    }
+    };
+
+
   return (
     <AuthContext.Provider
       value={{
@@ -59,6 +81,7 @@ export const AuthProvider = ({ children }) => {
         inviteCount,
         setInviteCount,
         logout,
+        updateProfile,
         loading,
       }}
     >
