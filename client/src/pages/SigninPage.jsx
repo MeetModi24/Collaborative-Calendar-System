@@ -1,9 +1,13 @@
 import React, { useState } from 'react';
 import AppLayout from '../components/AppLayout';
-// import { useNavigate } from 'react-router-dom'; // NEW: You'll need this for redirection
-// import { useAuth } from '../context/AuthContext'; // NEW: You'll need this to update auth state
+import { useNavigate } from 'react-router-dom'; // NEW: You'll need this for redirection
+import { useAuth } from '../context/AuthContext'; // NEW: You'll need this to update auth state
 
 export default function SigninPage() {
+
+  const navigate = useNavigate(); // enable redirection
+const { login } = useAuth();    // enables login state update
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [remember_me, setRememberMe] = useState(false); // NEW: State for remember me checkbox
@@ -19,7 +23,7 @@ export default function SigninPage() {
 
     // --- Start of Backend API Call Logic ---
     try {
-      const response = await fetch('/api/auth/signin', {
+      const response = await fetch('http://127.0.0.1:5000/api/auth/signin', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -32,10 +36,11 @@ export default function SigninPage() {
       const data = await response.json();
 
       if (response.ok) {
-        console.log('Login successful:', data.message);
-        // await login({ name: data.name, email: email });
-        // navigate('/calendar');
-      } else {
+          console.log('Login successful:', data.message);
+          await login({ name: data.user.name, email: data.user.email });
+          navigate('/calendar');
+        }
+      else {
         const errorMessage = data.error || data.message || 'An unknown error occurred.';
         console.error('Login failed:', errorMessage);
         setError(errorMessage);

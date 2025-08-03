@@ -1,5 +1,6 @@
 // src/context/AuthContext.jsx
-import React, { createContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
+
 
 // Create context
 export const AuthContext = createContext();
@@ -72,6 +73,11 @@ export const AuthProvider = ({ children }) => {
     }
     };
 
+    const login = (userData) => {
+      setCurrentUser(userData);
+      setIsAuthenticated(true);
+    };
+
 
   return (
     <AuthContext.Provider
@@ -80,6 +86,7 @@ export const AuthProvider = ({ children }) => {
         isAuthenticated,
         inviteCount,
         setInviteCount,
+        login,
         logout,
         updateProfile,
         loading,
@@ -88,4 +95,8 @@ export const AuthProvider = ({ children }) => {
       {children}
     </AuthContext.Provider>
   );
+};
+
+export const useAuth = () => {
+  return useContext(AuthContext);
 };
