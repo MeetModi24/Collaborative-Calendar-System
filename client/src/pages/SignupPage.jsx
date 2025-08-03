@@ -1,7 +1,10 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';  // ✅ Import navigation
 import AppLayout from '../components/AppLayout';
 
 export default function SignupPage() {
+  const navigate = useNavigate(); // ✅ Initialize navigate
+
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -13,9 +16,11 @@ export default function SignupPage() {
   const [errors, setErrors] = useState({});
   const [serverMessage, setServerMessage] = useState('');
 
+  // ✅ Handle input change
   const handleChange = (e) =>
     setFormData({ ...formData, [e.target.name]: e.target.value });
 
+  // ✅ Form validation
   const validate = () => {
     const newErrors = {};
     const emailRegex =
@@ -39,6 +44,7 @@ export default function SignupPage() {
     return Object.keys(newErrors).length === 0;
   };
 
+  // ✅ Handle form submit
   const handleSubmit = async (e) => {
     e.preventDefault();
     setServerMessage('');
@@ -76,6 +82,12 @@ export default function SignupPage() {
       if (response.ok) {
         setServerMessage(data.message || 'Signup successful');
         setFormData({ name: '', email: '', password: '', confirmPassword: '' });
+
+        // ✅ Redirect to calendar page after 1 second
+        setTimeout(() => {
+          navigate('/calendar');
+        }, 1000);
+
       } else {
         setServerMessage(data.error || 'Signup failed');
       }
