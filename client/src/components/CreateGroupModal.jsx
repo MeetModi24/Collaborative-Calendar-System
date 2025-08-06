@@ -1,6 +1,4 @@
-// src/components/CreateGroupModal.jsx
 import React, { useState } from "react";
-// import "./CreateGroupModal.css"; // Optional for your custom styling
 
 export default function CreateGroupModal({ show, onClose }) {
   const [groupName, setGroupName] = useState("");
@@ -8,25 +6,67 @@ export default function CreateGroupModal({ show, onClose }) {
   const [email, setEmail] = useState("");
   const [role, setRole] = useState("EDITOR");
   const [members, setMembers] = useState([]);
+  const [error, setError] = useState("");
+
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
   const handleAddMember = () => {
-    if (email.trim()) {
-      setMembers([...members, { email, role }]);
-      setEmail("");
-      setRole("EDITOR");
+    if (!emailRegex.test(email)) {
+      setError("Please enter a valid email");
+      return;
     }
+
+    if (members.find((m) => m.email === email.trim().toLowerCase())) {
+      setError("Member already added");
+      return;
+    }
+
+    setMembers([...members, { email: email.trim().toLowerCase(), role }]);
+    setEmail("");
+    setRole("EDITOR");
+    setError("");
   };
 
-  const handleCreateGroup = () => {
-    const payload = {
-      groupName,
-      description,
-      members,
-    };
-    console.log("Creating group:", payload);
-    // TODO: Send payload to backend
-    onClose();
+  const removeMember = (emailToRemove) => {
+    setMembers(members.filter((m) => m.email !== emailToRemove));
   };
+
+const handleCreateGroup = () => {
+  const payload = {
+    name: groupName,
+    description,
+    members: members.map((m) => m.email),
+    permissions: members.map((m) => m.role),
+  };
+
+  fetch("http://127.0.0.1:5000/api/auth/create_group", {
+    method: "POST",
+    credentials: "include", // 🔴 VERY IMPORTANT: sends session cookie
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  })
+    .then(async (res) => {
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(text); // this helps reveal if Flask returned HTML
+      }
+      return res.json();
+    })
+    .then((data) => {
+      if (data.emails && data.emails.length > 0) {
+        alert("No users found:\n" + data.emails.join("\n"));
+      } else {
+        alert("Group created successfully!");
+      }
+      onClose(); // close modal
+    })
+    .catch((err) => {
+      console.error("Error creating group:", err);
+      alert("Something went wrong:\n" + err.message);
+    });
+};
 
   if (!show) return null;
 
@@ -46,19 +86,45 @@ export default function CreateGroupModal({ show, onClose }) {
             <textarea className="form-control mb-3" value={description} onChange={(e) => setDescription(e.target.value)} />
 
             <label className="form-label fw-bold">Members</label>
-            <div className="input-group mb-3">
-              <input type="email" className="form-control" placeholder="Enter email" value={email} onChange={(e) => setEmail(e.target.value)} />
+            <div className="input-group mb-2">
+              <input
+                type="email"
+                className="form-control"
+                placeholder="Enter email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
               <select className="form-select" value={role} onChange={(e) => setRole(e.target.value)}>
                 <option value="EDITOR">EDITOR</option>
                 <option value="VIEWER">VIEWER</option>
                 <option value="ADMIN">ADMIN</option>
               </select>
-              <button className="btn btn-dark" onClick={handleAddMember}>ADD +</button>
+              <button className="btn btn-dark" type="button" onClick={handleAddMember}>
+                ADD +
+              </button>
+            </div>
+            {error && <div className="text-danger mb-2">{error}</div>}
+
+            <div className="d-flex flex-wrap gap-2">
+              {members.map((m, i) => (
+                <span className="badge bg-dark d-flex align-items-center" key={i}>
+                  {m.email} ({m.role})
+                  <button
+                    type="button"
+                    className="btn-close btn-close-white ms-2"
+                    onClick={() => removeMember(m.email)}
+                  ></button>
+                </span>
+              ))}
             </div>
           </div>
           <div className="modal-footer">
-            <button className="btn btn-secondary" onClick={onClose}>CANCEL</button>
-            <button className="btn btn-dark" onClick={handleCreateGroup}>CREATE GROUP</button>
+            <button className="btn btn-secondary" onClick={onClose}>
+              CANCEL
+            </button>
+            <button className="btn btn-dark" onClick={handleCreateGroup}>
+              CREATE GROUP
+            </button>
           </div>
         </div>
       </div>

@@ -9,7 +9,7 @@ def create_app():
     app.config.from_object(Config)
 
     # Enable CORS so React frontend can talk to Flask API
-    CORS(app, supports_credentials=True, origins=["http://localhost:3000"])  # update for production domain if needed
+    CORS(app, supports_credentials=True, origins=["http://127.0.0.1:3000"])  # update for production domain if needed
 
     # Initialize extensions
     db.init_app(app)

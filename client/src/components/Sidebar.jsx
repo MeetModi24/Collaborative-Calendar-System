@@ -67,12 +67,19 @@ export default function Sidebar({
           </Link>
 
           <button
-            onClick={onCreateGroupClick}
-            className={`${navItemClass} bg-transparent border-0 text-start w-100`}
-          >
-            <i className="bx bxs-user-plus fs-5 me-2" />
-            {!collapsed && <span>Create Group</span>}
-          </button>
+          onClick={() => {
+            if (isAuthenticated) {
+              onCreateGroupClick(); // Only show modal if logged in
+            } else {
+              alert("You must be logged in to create a group.");
+            }
+          }}
+          className={`${navItemClass} bg-transparent border-0 text-start w-100`}
+        >
+          <i className="bx bxs-user-plus fs-5 me-2" />
+          {!collapsed && <span>Create Group</span>}
+        </button>
+
 
           <button
             onClick={onInvitesClick}

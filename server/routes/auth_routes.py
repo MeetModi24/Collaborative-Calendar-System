@@ -2,7 +2,7 @@ from flask import Blueprint, request, jsonify
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import login_user, login_required, current_user, logout_user
 
-from server.models import User
+from server.models import User, Group, Member
 from server.extensions import db
 
 auth_bp = Blueprint('auth', __name__)
@@ -115,3 +115,49 @@ def signin():
             'email': user.email
         }
     }), 200
+
+@auth_bp.route('/create_group', methods=['POST'])
+@login_required
+def create_group():
+    group = request.get_json()
+    invalid_emails = []
+
+    try:
+        newGroup = Group(
+            group_name=group['name'],
+            description=group['description']
+        )
+        db.session.add(newGroup)
+        db.session.flush()
+
+        db.session.add(Member(
+            user_id=current_user.user_id,
+            group_id=newGroup.group_id,
+            read_status='Read',
+            permission='Admin',
+            status='Accepted'
+        ))
+
+        for email, perm in zip(group['members'], group['permissions']):
+            email = email.strip().lower()
+            if email == current_user.email:
+                continue
+            user = User.query.filter_by(email=email).first()
+            if user is None:
+                invalid_emails.append(email)
+                continue
+            newMember = Member(
+                user_id=user.user_id,
+                group_id=newGroup.group_id,
+               permission=perm.capitalize(),
+                status='Pending'
+            )
+            db.session.add(newMember)
+
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        print("⚠️ Error creating group:", e)  # 👈 PRINT ACTUAL ERROR TO TERMINAL
+        return jsonify({'error': "Unable to add new group to the database"}), 500
+
+    return jsonify({'emails': invalid_emails}), 200

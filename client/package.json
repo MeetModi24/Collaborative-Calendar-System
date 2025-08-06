@@ -2,6 +2,9 @@
   "name": "client",
   "version": "0.1.0",
   "private": true,
+ "homepage": "http://127.0.0.1:3000",
+
+
   "dependencies": {
     "@fullcalendar/bootstrap5": "^6.1.18",
     "@fullcalendar/core": "^6.1.18",

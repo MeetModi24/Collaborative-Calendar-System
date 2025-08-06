@@ -11,7 +11,7 @@ export const AuthProvider = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [inviteCount, setInviteCount] = useState(0);
   const [loading, setLoading] = useState(true);
-
+  
   useEffect(() => {
     const fetchAuthStatus = async () => {
       try {
