@@ -1,11 +1,10 @@
-// src/components/ProfileSettingsModal.jsx
 import React, { useState, useContext, useEffect } from 'react';
 import Modal from 'react-bootstrap/Modal';
 import Button from 'react-bootstrap/Button';
 import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 
-export default function ProfileSettingsModal({ show, onClose }) {
+export default function ProfileSettingsModal({ show, onClose, addFlashMessage }) {
   const { currentUser, isAuthenticated, updateProfile } = useContext(AuthContext);
   const navigate = useNavigate();
 
@@ -20,11 +19,10 @@ export default function ProfileSettingsModal({ show, onClose }) {
   // Redirect if modal is opened by unauthenticated user
   useEffect(() => {
     if (show && !isAuthenticated) {
-      alert("You must be logged in to access profile settings.");
       onClose();
       navigate('/signin');
     }
-  }, [isAuthenticated, show]);
+  }, [isAuthenticated, show, navigate, onClose]);
 
   // Populate form with current user data when modal opens
   useEffect(() => {
@@ -43,7 +41,7 @@ export default function ProfileSettingsModal({ show, onClose }) {
 
   const handleSubmit = async () => {
     if (!form.name.trim() || !form.email.trim() || !form.password.trim()) {
-      alert("All fields are required.");
+      addFlashMessage("danger", "All fields are required.");
       return;
     }
 
@@ -54,10 +52,10 @@ export default function ProfileSettingsModal({ show, onClose }) {
     });
 
     if (res.success) {
-      alert("Profile updated successfully.");
+      addFlashMessage("success", "Profile updated successfully.");
       onClose();
     } else {
-      alert(res.error || "Failed to update profile.");
+      addFlashMessage("danger", res.error || "Failed to update profile.");
     }
   };
 

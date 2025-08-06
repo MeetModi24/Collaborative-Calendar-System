@@ -1,6 +1,9 @@
 import React, { useState } from "react";
+import { useAuth } from '../context/AuthContext';
 
 export default function CreateGroupModal({ show, onClose }) {
+  const { addFlashMessage } = useAuth(); // ✅ Use context instead of prop
+
   const [groupName, setGroupName] = useState("");
   const [description, setDescription] = useState("");
   const [email, setEmail] = useState("");
@@ -31,42 +34,47 @@ export default function CreateGroupModal({ show, onClose }) {
     setMembers(members.filter((m) => m.email !== emailToRemove));
   };
 
-const handleCreateGroup = () => {
-  const payload = {
-    name: groupName,
-    description,
-    members: members.map((m) => m.email),
-    permissions: members.map((m) => m.role),
-  };
+  const handleCreateGroup = () => {
+    if (!groupName.trim()) {
+      addFlashMessage("danger", "Group name is required.");
+      return;
+    }
 
-  fetch("http://127.0.0.1:5000/api/auth/create_group", {
-    method: "POST",
-    credentials: "include", // 🔴 VERY IMPORTANT: sends session cookie
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(payload),
-  })
-    .then(async (res) => {
-      if (!res.ok) {
-        const text = await res.text();
-        throw new Error(text); // this helps reveal if Flask returned HTML
-      }
-      return res.json();
+    const payload = {
+      name: groupName,
+      description,
+      members: members.map((m) => m.email),
+      permissions: members.map((m) => m.role),
+    };
+
+    fetch("http://127.0.0.1:5000/api/groups/create_group", {
+      method: "POST",
+      credentials: "include", // Send session cookie
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
     })
-    .then((data) => {
-      if (data.emails && data.emails.length > 0) {
-        alert("No users found:\n" + data.emails.join("\n"));
-      } else {
-        alert("Group created successfully!");
-      }
-      onClose(); // close modal
-    })
-    .catch((err) => {
-      console.error("Error creating group:", err);
-      alert("Something went wrong:\n" + err.message);
-    });
-};
+      .then(async (res) => {
+        if (!res.ok) {
+          const text = await res.text();
+          throw new Error(text);
+        }
+        return res.json();
+      })
+      .then((data) => {
+        if (data.emails && data.emails.length > 0) {
+          addFlashMessage("danger", "No users found:\n" + data.emails.join(", "));
+        } else {
+          addFlashMessage("success", "Group created successfully!");
+        }
+        onClose();
+      })
+      .catch((err) => {
+        console.error("Error creating group:", err);
+        addFlashMessage("danger", "Something went wrong: " + err.message);
+      });
+  };
 
   if (!show) return null;
 
@@ -80,10 +88,19 @@ const handleCreateGroup = () => {
           </div>
           <div className="modal-body">
             <label className="form-label fw-bold">Group Name</label>
-            <input type="text" className="form-control mb-3" value={groupName} onChange={(e) => setGroupName(e.target.value)} />
+            <input
+              type="text"
+              className="form-control mb-3"
+              value={groupName}
+              onChange={(e) => setGroupName(e.target.value)}
+            />
 
             <label className="form-label fw-bold">Description</label>
-            <textarea className="form-control mb-3" value={description} onChange={(e) => setDescription(e.target.value)} />
+            <textarea
+              className="form-control mb-3"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+            />
 
             <label className="form-label fw-bold">Members</label>
             <div className="input-group mb-2">
@@ -94,12 +111,20 @@ const handleCreateGroup = () => {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
               />
-              <select className="form-select" value={role} onChange={(e) => setRole(e.target.value)}>
+              <select
+                className="form-select"
+                value={role}
+                onChange={(e) => setRole(e.target.value)}
+              >
                 <option value="EDITOR">EDITOR</option>
                 <option value="VIEWER">VIEWER</option>
                 <option value="ADMIN">ADMIN</option>
               </select>
-              <button className="btn btn-dark" type="button" onClick={handleAddMember}>
+              <button
+                className="btn btn-dark"
+                type="button"
+                onClick={handleAddMember}
+              >
                 ADD +
               </button>
             </div>

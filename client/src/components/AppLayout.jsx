@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+// src/components/AppLayout.jsx
+import React, { useState, useCallback } from 'react';
 import Sidebar from './Sidebar';
 import TopNavbar from './TopNavbar';
 import FlashMessages from './FlashMessages';
@@ -6,13 +7,19 @@ import CreateGroupModal from './CreateGroupModal';
 import ProfileSettingsModal from './ProfileSettingsModal';
 import InvitesModal from './InvitesModal';
 
-export default function AppLayout({ children, flashMessages = [] }) {
+export default function AppLayout({ children }) {
   const [collapsed, setCollapsed] = useState(true);
-  const toggleSidebar = () => setCollapsed((prev) => !prev);
-
+  const [flashMessages, setFlashMessages] = useState([]);
   const [showCreateGroupModal, setShowCreateGroupModal] = useState(false);
   const [showProfileSettingsModal, setShowProfileSettingsModal] = useState(false);
   const [showInvitesModal, setShowInvitesModal] = useState(false);
+
+  // ✅ Add Flash Message Handler
+  const addFlashMessage = useCallback((type, message) => {
+    setFlashMessages((prev) => [...prev, [type, message]]);
+  }, []);
+
+  const toggleSidebar = () => setCollapsed((prev) => !prev);
 
   return (
     <div className="d-flex" style={{ minHeight: '100vh', overflowX: 'hidden' }}>
@@ -22,6 +29,7 @@ export default function AppLayout({ children, flashMessages = [] }) {
         onCreateGroupClick={() => setShowCreateGroupModal(true)}
         onProfileSettingsClick={() => setShowProfileSettingsModal(true)}
         onInvitesClick={() => setShowInvitesModal(true)}
+        addFlashMessage={addFlashMessage}  
       />
 
       <div className="flex-grow-1">
