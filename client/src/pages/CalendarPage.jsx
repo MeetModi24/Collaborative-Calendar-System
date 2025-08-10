@@ -1,3 +1,4 @@
+// src/pages/CalendarPage.jsx
 import React, { useRef, useState, useEffect } from "react";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
@@ -8,18 +9,33 @@ import Tooltip from "bootstrap/js/dist/tooltip";
 
 import "bootstrap/dist/css/bootstrap.min.css";
 import "bootstrap-icons/font/bootstrap-icons.min.css";
-import "bootstrap/dist/js/bootstrap.bundle.min.js"; // Needed for tooltip
+import "bootstrap/dist/js/bootstrap.bundle.min.js";
 import "../styles/calendar.css";
 
 import CreateGroupModal from "../components/CreateGroupModal";
 import AppLayout from "../components/AppLayout";
+
+import { useDispatch, useSelector } from "react-redux";
+import {
+  fetchEvents,
+  addEvent,
+  updateEvent,
+  removeEvent,
+  selectEventsByGroup,
+  selectEventsStatus,
+} from "../slices/eventsSlice";
 
 export default function CalendarPage() {
   const calendarRef = useRef(null);
 
   const [groups, setGroups] = useState([]);
   const [selectedGroup, setSelectedGroup] = useState(1);
-  const [events, setEvents] = useState([]);
+  const events = useSelector((state) =>
+    selectEventsByGroup(state, selectedGroup)
+  );
+  const eventsStatus = useSelector(selectEventsStatus);
+  const dispatch = useDispatch();
+
   const [permission, setPermission] = useState(null);
 
   const [showAddModal, setShowAddModal] = useState(false);
@@ -38,7 +54,7 @@ export default function CalendarPage() {
 
   // Fetch groups on mount
   useEffect(() => {
-    fetch("http://127.0.0.1:5000/api/groups/list", { credentials: "include" })
+    fetch("/api/groups/list", { credentials: "include" })
       .then((res) => res.json())
       .then((data) => {
         const formatted = [{ id: 1, name: "Dashboard" }, ...data.groups];
@@ -50,37 +66,15 @@ export default function CalendarPage() {
   // Fetch events & permission when group changes
   useEffect(() => {
     if (!selectedGroup) return;
+    dispatch(fetchEvents(selectedGroup)); // ✅ Redux-managed caching
 
-    // Get events
-    fetch(`http://127.0.0.1:5000/api/groups/${selectedGroup}/events`, {
+    fetch(`/api/groups/get_group_permission/${selectedGroup}`, {
       credentials: "include",
     })
       .then((res) => res.json())
-      .then((data) => {
-        const mapped = data.events.map((ev) => ({
-          id: ev.event_id,
-          title: ev.event_name,
-          start: ev.start_time,
-          end: ev.end_time,
-          description: ev.description,
-          participants: ev.participants,
-          status: ev.status || "approved", // use backend status if provided
-        }));
-        setEvents(mapped);
-      })
-      .catch((err) => console.error("Error fetching events:", err));
-
-    // Get permission
-    fetch(
-      `http://127.0.0.1:5000/api/groups/get_group_permission/${selectedGroup}`,
-      {
-        credentials: "include",
-      }
-    )
-      .then((res) => res.json())
       .then((data) => setPermission(data.permission))
       .catch(() => setPermission(null));
-  }, [selectedGroup]);
+  }, [selectedGroup, dispatch]);
 
   const handleDateClick = (info) => {
     setNewEvent({
@@ -100,85 +94,33 @@ export default function CalendarPage() {
 
   const handleSaveEvent = () => {
     if (!newEvent.title || !newEvent.start || !newEvent.end) return;
-
-    fetch("http://127.0.0.1:5000/api/groups/add_event", {
-      method: "POST",
-      credentials: "include",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...newEvent, group_id: selectedGroup }),
-    })
-      .then((res) => res.json())
-      .then((data) => {
-        if (!data.error) {
-          setEvents([...events, { id: Date.now(), ...newEvent }]);
-          setShowAddModal(false);
-        } else {
-          alert(data.error);
-        }
-      })
-      .catch((err) => console.error("Error adding event:", err));
+    dispatch(addEvent({ groupId: selectedGroup, eventData: newEvent }));
+    setShowAddModal(false);
   };
 
   const handleUpdateEvent = () => {
     if (!currentEvent) return;
-    const eventId = currentEvent.id;
-
-    fetch(`http://127.0.0.1:5000/api/groups/update_event/${eventId}`, {
-      method: "PUT",
-      credentials: "include",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        title: currentEvent.title,
-        description: currentEvent.extendedProps.description,
-        start: currentEvent.startStr,
-        end: currentEvent.endStr,
-        participants: currentEvent.extendedProps.participants,
-        group_id: selectedGroup,
-        version: currentEvent.extendedProps.version || 0,
-      }),
-    })
-      .then((res) => res.json())
-      .then((data) => {
-        if (!data.error) {
-          setEvents(
-            events.map((ev) =>
-              ev.id === eventId
-                ? {
-                    ...ev,
-                    title: currentEvent.title,
-                    description: currentEvent.extendedProps.description,
-                    start: currentEvent.startStr,
-                    end: currentEvent.endStr,
-                  }
-                : ev
-            )
-          );
-          setShowViewModal(false);
-        } else {
-          alert(data.error);
-        }
+    dispatch(
+      updateEvent({
+        groupId: selectedGroup,
+        eventId: currentEvent.id,
+        updates: {
+          title: currentEvent.title,
+          description: currentEvent.extendedProps.description,
+          start: currentEvent.startStr,
+          end: currentEvent.endStr,
+          participants: currentEvent.extendedProps.participants,
+          version: currentEvent.extendedProps.version || 0,
+        },
       })
-      .catch((err) => console.error("Error updating event:", err));
+    );
+    setShowViewModal(false);
   };
 
   const handleRemoveEvent = () => {
     if (!currentEvent) return;
-    const eventId = currentEvent.id;
-
-    fetch(`http://127.0.0.1:5000/api/groups/remove_event/${eventId}`, {
-      method: "DELETE",
-      credentials: "include",
-    })
-      .then((res) => res.json())
-      .then((data) => {
-        if (!data.error) {
-          setEvents(events.filter((ev) => ev.id !== eventId));
-          setShowViewModal(false);
-        } else {
-          alert(data.error);
-        }
-      })
-      .catch((err) => console.error("Error deleting event:", err));
+    dispatch(removeEvent({ groupId: selectedGroup, eventId: currentEvent.id }));
+    setShowViewModal(false);
   };
 
   // Bootstrap tooltip + pending opacity
@@ -189,12 +131,10 @@ export default function CalendarPage() {
       trigger: "hover",
       container: "body",
     });
-
     if (info.event.extendedProps.status === "pending") {
       info.el.style.opacity = "0.5";
     }
   };
-
 
   return (
     <AppLayout>
@@ -224,23 +164,27 @@ export default function CalendarPage() {
             </div>
           </header>
 
-          <FullCalendar
-            ref={calendarRef}
-            plugins={[
-              dayGridPlugin,
-              timeGridPlugin,
-              interactionPlugin,
-              bootstrap5Plugin,
-            ]}
-            initialView="dayGridMonth"
-            themeSystem="bootstrap5"
-            selectable={permission !== "Viewer"}
-            editable={permission !== "Viewer"}
-            events={events}
-            dateClick={permission !== "Viewer" ? handleDateClick : null}
-            eventClick={handleEventClick}
-            eventDidMount={handleEventDidMount} // ✅ Added
-          />
+          {eventsStatus === "loading" ? (
+            <p>Loading events...</p>
+          ) : (
+            <FullCalendar
+              ref={calendarRef}
+              plugins={[
+                dayGridPlugin,
+                timeGridPlugin,
+                interactionPlugin,
+                bootstrap5Plugin,
+              ]}
+              initialView="dayGridMonth"
+              themeSystem="bootstrap5"
+              selectable={permission !== "Viewer"}
+              editable={permission !== "Viewer"}
+              events={events}
+              dateClick={permission !== "Viewer" ? handleDateClick : null}
+              eventClick={handleEventClick}
+              eventDidMount={handleEventDidMount}
+            />
+          )}
         </div>
 
         <CreateGroupModal
@@ -306,10 +250,7 @@ export default function CalendarPage() {
                   >
                     Cancel
                   </button>
-                  <button
-                    className="btn btn-primary"
-                    onClick={handleSaveEvent}
-                  >
+                  <button className="btn btn-primary" onClick={handleSaveEvent}>
                     Create Event
                   </button>
                 </div>

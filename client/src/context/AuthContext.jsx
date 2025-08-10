@@ -1,5 +1,7 @@
 // src/context/AuthContext.jsx
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { clearAllCache } from "../slices/eventsSlice";
+import { useDispatch } from "react-redux";
 
 // Create context
 export const AuthContext = createContext();
@@ -10,8 +12,8 @@ export const AuthProvider = ({ children }) => {
   const [inviteCount, setInviteCount] = useState(0);
   const [loading, setLoading] = useState(true);
 
-  // ✅ Flash Messages State
   const [flashMessages, setFlashMessages] = useState([]);
+  const dispatch = useDispatch();
 
   useEffect(() => {
     const fetchAuthStatus = async () => {
@@ -45,8 +47,13 @@ export const AuthProvider = ({ children }) => {
         method: 'POST',
         credentials: 'include',
       });
+
       setCurrentUser(null);
       setIsAuthenticated(false);
+
+      // ✅ Clear Redux event cache
+      dispatch(clearAllCache());
+
       addFlashMessage('success', 'You have been logged out.');
     } catch (error) {
       console.error('Logout failed:', error);
@@ -54,7 +61,6 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // 🛠 Profile Update Function
   const updateProfile = async ({ name, email, password }) => {
     try {
       const res = await fetch('/api/auth/user_profile', {
@@ -85,12 +91,10 @@ export const AuthProvider = ({ children }) => {
     addFlashMessage('success', 'Logged in successfully!');
   };
 
-  // ✅ Global Flash Message Function
   const addFlashMessage = (type, message) => {
     const id = Date.now();
     setFlashMessages((prev) => [...prev, { id, type, message }]);
 
-    // Auto-remove after 3 seconds
     setTimeout(() => {
       setFlashMessages((prev) => prev.filter((msg) => msg.id !== id));
     }, 3000);
@@ -108,7 +112,7 @@ export const AuthProvider = ({ children }) => {
         updateProfile,
         loading,
         flashMessages,
-        addFlashMessage, // ✅ make available globally
+        addFlashMessage,
       }}
     >
       {children}
@@ -116,6 +120,4 @@ export const AuthProvider = ({ children }) => {
   );
 };
 
-export const useAuth = () => {
-  return useContext(AuthContext);
-};
+export const useAuth = () => useContext(AuthContext);
