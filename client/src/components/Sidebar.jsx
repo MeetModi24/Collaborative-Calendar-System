@@ -1,7 +1,8 @@
-import React, { useContext } from 'react';
-import { Link } from 'react-router-dom';
-import { FaBars } from 'react-icons/fa';
-import { AuthContext } from '../context/AuthContext';
+import React, { useContext } from "react";
+import { Link } from "react-router-dom";
+import { FaBars } from "react-icons/fa";
+import { AuthContext } from "../context/AuthContext";
+import { useFlash } from "../context/FlashContext"; // ✅ new import
 
 export default function Sidebar({
   collapsed,
@@ -9,24 +10,20 @@ export default function Sidebar({
   onCreateGroupClick,
   onProfileSettingsClick,
   onInvitesClick,
-  addFlashMessage
 }) {
-  const {
-    currentUser,
-    isAuthenticated,
-    logout,
-  } = useContext(AuthContext);
+  const { currentUser, isAuthenticated, logout } = useContext(AuthContext);
+  const { addFlashMessage } = useFlash(); // ✅ get from global context
 
   const navItemClass =
-    'sidebar-item d-flex align-items-center text-white px-3 py-2 text-decoration-none';
+    "sidebar-item d-flex align-items-center text-white px-3 py-2 text-decoration-none";
 
   return (
     <div
       className="bg-dark text-white d-flex flex-column justify-content-between"
       style={{
-        width: collapsed ? '70px' : '240px',
-        height: '100vh',
-        transition: 'width 0.3s ease',
+        width: collapsed ? "70px" : "240px",
+        height: "100vh",
+        transition: "width 0.3s ease",
       }}
     >
       <div>
@@ -36,7 +33,7 @@ export default function Sidebar({
             role="button"
             onClick={toggleSidebar}
             className={navItemClass}
-            style={{ cursor: 'pointer' }}
+            style={{ cursor: "pointer" }}
           >
             <FaBars className="me-2 fs-5" />
             {!collapsed && <span className="fw-bold">Workspace</span>}
@@ -69,9 +66,12 @@ export default function Sidebar({
           <button
             onClick={() => {
               if (isAuthenticated) {
-                onCreateGroupClick(); // Show modal if logged in
+                onCreateGroupClick();
               } else {
-                addFlashMessage("danger", "You must be logged in to create a group.");
+                addFlashMessage(
+                  "danger",
+                  "You must be logged in to create a group."
+                );
               }
             }}
             className={`${navItemClass} bg-transparent border-0 text-start w-100`}
@@ -105,7 +105,9 @@ export default function Sidebar({
             <i className="bx bx-user-circle fs-4" />
             {!collapsed && (
               <>
-                <span className="fw-semibold ms-2">{currentUser?.name || 'User'}</span>
+                <span className="fw-semibold ms-2">
+                  {currentUser?.name || "User"}
+                </span>
                 <button
                   className="btn text-white p-0 ms-auto"
                   title="Sign out"

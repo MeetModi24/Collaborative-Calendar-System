@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';  // ✅ Import navigation
+import { useNavigate } from 'react-router-dom';
 import AppLayout from '../components/AppLayout';
+import { useFlash } from '../context/FlashContext'; // ✅ Import flash
 
 export default function SignupPage() {
-  const navigate = useNavigate(); // ✅ Initialize navigate
+  const navigate = useNavigate();
+  const { addFlashMessage } = useFlash(); // ✅ Initialize flash
 
   const [formData, setFormData] = useState({
     name: '',
@@ -14,13 +16,10 @@ export default function SignupPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [errors, setErrors] = useState({});
-  const [serverMessage, setServerMessage] = useState('');
 
-  // ✅ Handle input change
   const handleChange = (e) =>
     setFormData({ ...formData, [e.target.name]: e.target.value });
 
-  // ✅ Form validation
   const validate = () => {
     const newErrors = {};
     const emailRegex =
@@ -44,22 +43,16 @@ export default function SignupPage() {
     return Object.keys(newErrors).length === 0;
   };
 
-  // ✅ Handle form submit
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setServerMessage('');
 
     if (!validate()) return;
 
     try {
-      console.log("📤 Sending signup request...", formData);
-
       const response = await fetch('http://127.0.0.1:5000/api/auth/signup', {
         method: 'POST',
         credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: formData.name,
           email: formData.email,
@@ -67,33 +60,26 @@ export default function SignupPage() {
         }),
       });
 
-      console.log("✅ Response received:", response);
-
       let data;
       try {
         data = await response.json();
-        console.log("📥 Parsed response:", data);
-      } catch (parseError) {
-        console.error("❌ Failed to parse JSON:", parseError);
-        setServerMessage('Invalid server response');
+      } catch {
+        addFlashMessage('danger', 'Invalid server response.');
         return;
       }
 
       if (response.ok) {
-        setServerMessage(data.message || 'Signup successful');
+        addFlashMessage('success', data.message || 'Signup successful!');
         setFormData({ name: '', email: '', password: '', confirmPassword: '' });
 
-        // ✅ Redirect to calendar page after 1 second
         setTimeout(() => {
           navigate('/calendar');
         }, 1000);
-
       } else {
-        setServerMessage(data.error || 'Signup failed');
+        addFlashMessage('danger', data.error || 'Signup failed.');
       }
-    } catch (error) {
-      console.error("❌ Fetch error:", error);
-      setServerMessage('An error occurred. Please try again.');
+    } catch {
+      addFlashMessage('danger', 'An error occurred. Please try again.');
     }
   };
 
@@ -102,13 +88,6 @@ export default function SignupPage() {
       <div className="container mt-5" style={{ width: '70%' }}>
         <form onSubmit={handleSubmit} className="shadow p-3 mb-5 bg-body rounded">
           <legend>Sign Up</legend>
-
-          {serverMessage && (
-            <div className={`alert 
-              ${serverMessage.toLowerCase().includes('success') ? 'alert-success' : 'alert-danger'}`}>
-              {serverMessage}
-            </div>
-          )}
 
           <label className="form-label">Name</label>
           <input

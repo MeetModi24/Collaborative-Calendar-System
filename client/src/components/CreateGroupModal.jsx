@@ -1,8 +1,8 @@
 import React, { useState } from "react";
-import { useAuth } from '../context/AuthContext';
+import { useFlash } from "../context/FlashContext"; // ✅ correct import
 
 export default function CreateGroupModal({ show, onClose }) {
-  const { addFlashMessage } = useAuth(); // ✅ Use context instead of prop
+  const { addFlashMessage } = useFlash(); // ✅ now from FlashContext
 
   const [groupName, setGroupName] = useState("");
   const [description, setDescription] = useState("");
@@ -18,12 +18,10 @@ export default function CreateGroupModal({ show, onClose }) {
       setError("Please enter a valid email");
       return;
     }
-
     if (members.find((m) => m.email === email.trim().toLowerCase())) {
       setError("Member already added");
       return;
     }
-
     setMembers([...members, { email: email.trim().toLowerCase(), role }]);
     setEmail("");
     setRole("EDITOR");
@@ -47,12 +45,10 @@ export default function CreateGroupModal({ show, onClose }) {
       permissions: members.map((m) => m.role),
     };
 
-    fetch("http://127.0.0.1:5000/api/groups/create_group", {
+    fetch("/api/groups/create_group", {
       method: "POST",
-      credentials: "include", // Send session cookie
-      headers: {
-        "Content-Type": "application/json",
-      },
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     })
       .then(async (res) => {
@@ -63,8 +59,8 @@ export default function CreateGroupModal({ show, onClose }) {
         return res.json();
       })
       .then((data) => {
-        if (data.emails && data.emails.length > 0) {
-          addFlashMessage("danger", "No users found:\n" + data.emails.join(", "));
+        if (data.emails?.length) {
+          addFlashMessage("danger", "No users found: " + data.emails.join(", "));
         } else {
           addFlashMessage("success", "Group created successfully!");
         }
@@ -120,11 +116,7 @@ export default function CreateGroupModal({ show, onClose }) {
                 <option value="VIEWER">VIEWER</option>
                 <option value="ADMIN">ADMIN</option>
               </select>
-              <button
-                className="btn btn-dark"
-                type="button"
-                onClick={handleAddMember}
-              >
+              <button className="btn btn-dark" type="button" onClick={handleAddMember}>
                 ADD +
               </button>
             </div>

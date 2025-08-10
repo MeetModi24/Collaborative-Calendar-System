@@ -14,6 +14,8 @@ import "../styles/calendar.css";
 
 import CreateGroupModal from "../components/CreateGroupModal";
 import AppLayout from "../components/AppLayout";
+import { useFlash } from "../context/FlashContext";
+
 
 import { useDispatch, useSelector } from "react-redux";
 import {
@@ -41,6 +43,8 @@ export default function CalendarPage() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showViewModal, setShowViewModal] = useState(false);
   const [showCreateGroupModal, setShowCreateGroupModal] = useState(false);
+
+  const { addFlashMessage } = useFlash(); 
 
   const [newEvent, setNewEvent] = useState({
     title: "",
@@ -96,6 +100,7 @@ export default function CalendarPage() {
     if (!newEvent.title || !newEvent.start || !newEvent.end) return;
     dispatch(addEvent({ groupId: selectedGroup, eventData: newEvent }));
     setShowAddModal(false);
+    addFlashMessage("success", "Event created successfully!");
   };
 
   const handleUpdateEvent = () => {
@@ -115,12 +120,14 @@ export default function CalendarPage() {
       })
     );
     setShowViewModal(false);
+    addFlashMessage("success", "Event updated successfully!");
   };
 
   const handleRemoveEvent = () => {
     if (!currentEvent) return;
     dispatch(removeEvent({ groupId: selectedGroup, eventId: currentEvent.id }));
     setShowViewModal(false);
+    addFlashMessage("success", "Event removed successfully!");
   };
 
   // Bootstrap tooltip + pending opacity

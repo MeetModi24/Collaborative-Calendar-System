@@ -3,9 +3,11 @@ import Modal from 'react-bootstrap/Modal';
 import Button from 'react-bootstrap/Button';
 import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
+import { useFlash } from '../context/FlashContext'; // ✅ new import
 
-export default function ProfileSettingsModal({ show, onClose, addFlashMessage }) {
+export default function ProfileSettingsModal({ show, onClose }) {
   const { currentUser, isAuthenticated, updateProfile } = useContext(AuthContext);
+  const { addFlashMessage } = useFlash(); // ✅ get from FlashContext
   const navigate = useNavigate();
 
   const [form, setForm] = useState({
