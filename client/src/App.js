@@ -7,6 +7,7 @@ import SigninPage from './pages/SigninPage';
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import FlashMessages from './components/FlashMessages';
+import { NotificationsProvider } from "./context/NotificationsContext";
 import { useState } from "react";
 
 function App() {
@@ -19,6 +20,7 @@ function App() {
 
   return (
     <AuthProvider>
+      <NotificationsProvider>
       <FlashMessages messages={messages} />
       <Routes>
         <Route path="/" element={<HomePage addFlashMessage={addFlashMessage} />} />
@@ -34,6 +36,7 @@ function App() {
           }
         />
       </Routes>
+      </NotificationsProvider>
     </AuthProvider>
   );
 }

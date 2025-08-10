@@ -2,11 +2,13 @@ import React, { useContext } from "react";
 import { Navbar, Nav } from "react-bootstrap";
 import { Link } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext";
+import { useNotifications } from "../context/NotificationsContext"; // <-- import here
 import { FaVideo } from "react-icons/fa";
 import { BsBellFill } from "react-icons/bs";
 
 export default function TopNavbar() {
   const { isAuthenticated, currentUser } = useContext(AuthContext);
+  const { unreadNotificationsCount } = useNotifications();
 
   return (
     <Navbar bg="light" expand="lg" className="px-4 shadow-sm">
@@ -35,12 +37,16 @@ export default function TopNavbar() {
               className="position-relative"
             >
               <BsBellFill style={{ fontSize: "1.4rem" }} />
-              <span
-                id="notificationBadge"
-                className="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger d-none"
-              >
-                <span className="visually-hidden">unread notifications</span>
-              </span>
+              {unreadNotificationsCount > 0 && (
+                <span
+                  id="notificationBadge"
+                  className="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
+                  style={{ fontSize: "0.7rem" }}
+                >
+                  {unreadNotificationsCount}
+                  <span className="visually-hidden">unread notifications</span>
+                </span>
+              )}
             </Nav.Link>
 
             {/* Signout */}

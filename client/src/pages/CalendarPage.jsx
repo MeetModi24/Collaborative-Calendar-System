@@ -54,7 +54,7 @@ export default function CalendarPage() {
     description: "",
     participants: [],
   });
-
+  
   const [currentEvent, setCurrentEvent] = useState(null);
 
   // Controls visibility and editability as per showEventModal logic
@@ -73,13 +73,11 @@ export default function CalendarPage() {
 
   // Fetch groups on mount
   useEffect(() => {
-    fetch("/api/groups/list", { credentials: "include" })
+  // Fetch groups from API
+    fetch("http://127.0.0.1:5000/api/groups/get_groups", { credentials: "include" })
       .then((res) => res.json())
-      .then((data) => {
-        const formatted = [{ id: 1, name: "Dashboard" }, ...data.groups];
-        setGroups(formatted);
-      })
-      .catch((err) => console.error("Error fetching groups:", err));
+      .then((data) => setGroups(data))
+      .catch((err) => console.error("Failed to load groups", err));
   }, []);
 
   // Fetch events & permission when group changes
@@ -278,9 +276,9 @@ export default function CalendarPage() {
                 <option id="group-select-option-1" value={1}>Dashboard</option>
                 {groups.map((g) => (
                   <option
-                    key={g.id}
-                    id={`group-select-option-${g.id}`}
-                    value={g.id}
+                    key={g.group_id}                           // use group_id here
+                    id={`group-select-option-${g.group_id}`}  // and here
+                    value={g.group_id}                         // and as value
                   >
                     {g.name}
                   </option>
