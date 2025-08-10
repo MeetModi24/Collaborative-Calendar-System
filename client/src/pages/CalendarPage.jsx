@@ -4,9 +4,11 @@ import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
 import bootstrap5Plugin from "@fullcalendar/bootstrap5";
+import Tooltip from "bootstrap/js/dist/tooltip";
 
 import "bootstrap/dist/css/bootstrap.min.css";
 import "bootstrap-icons/font/bootstrap-icons.min.css";
+import "bootstrap/dist/js/bootstrap.bundle.min.js"; // Needed for tooltip
 import "../styles/calendar.css";
 
 import CreateGroupModal from "../components/CreateGroupModal";
@@ -17,7 +19,6 @@ export default function CalendarPage() {
 
   const [groups, setGroups] = useState([]);
   const [selectedGroup, setSelectedGroup] = useState(1);
-
   const [events, setEvents] = useState([]);
   const [permission, setPermission] = useState(null);
 
@@ -63,22 +64,32 @@ export default function CalendarPage() {
           end: ev.end_time,
           description: ev.description,
           participants: ev.participants,
+          status: ev.status || "approved", // use backend status if provided
         }));
         setEvents(mapped);
       })
       .catch((err) => console.error("Error fetching events:", err));
 
     // Get permission
-    fetch(`http://127.0.0.1:5000/api/groups/get_group_permission/${selectedGroup}`, {
-      credentials: "include",
-    })
+    fetch(
+      `http://127.0.0.1:5000/api/groups/get_group_permission/${selectedGroup}`,
+      {
+        credentials: "include",
+      }
+    )
       .then((res) => res.json())
       .then((data) => setPermission(data.permission))
       .catch(() => setPermission(null));
   }, [selectedGroup]);
 
   const handleDateClick = (info) => {
-    setNewEvent({ title: "", start: info.dateStr, end: info.dateStr, description: "", participants: [] });
+    setNewEvent({
+      title: "",
+      start: info.dateStr,
+      end: info.dateStr,
+      description: "",
+      participants: [],
+    });
     setShowAddModal(true);
   };
 
@@ -170,6 +181,21 @@ export default function CalendarPage() {
       .catch((err) => console.error("Error deleting event:", err));
   };
 
+  // Bootstrap tooltip + pending opacity
+  const handleEventDidMount = (info) => {
+    new Tooltip(info.el, {
+      title: info.event.extendedProps.description || info.event.title,
+      placement: "top",
+      trigger: "hover",
+      container: "body",
+    });
+
+    if (info.event.extendedProps.status === "pending") {
+      info.el.style.opacity = "0.5";
+    }
+  };
+
+
   return (
     <AppLayout>
       <div className="container py-4">
@@ -189,7 +215,10 @@ export default function CalendarPage() {
                   </option>
                 ))}
               </select>
-              <button className="btn btn-outline-secondary" onClick={() => setShowCreateGroupModal(true)}>
+              <button
+                className="btn btn-outline-secondary"
+                onClick={() => setShowCreateGroupModal(true)}
+              >
                 <i className="bx bx-cog"></i> Group Settings
               </button>
             </div>
@@ -197,7 +226,12 @@ export default function CalendarPage() {
 
           <FullCalendar
             ref={calendarRef}
-            plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin, bootstrap5Plugin]}
+            plugins={[
+              dayGridPlugin,
+              timeGridPlugin,
+              interactionPlugin,
+              bootstrap5Plugin,
+            ]}
             initialView="dayGridMonth"
             themeSystem="bootstrap5"
             selectable={permission !== "Viewer"}
@@ -205,10 +239,14 @@ export default function CalendarPage() {
             events={events}
             dateClick={permission !== "Viewer" ? handleDateClick : null}
             eventClick={handleEventClick}
+            eventDidMount={handleEventDidMount} // ✅ Added
           />
         </div>
 
-        <CreateGroupModal show={showCreateGroupModal} onClose={() => setShowCreateGroupModal(false)} />
+        <CreateGroupModal
+          show={showCreateGroupModal}
+          onClose={() => setShowCreateGroupModal(false)}
+        />
 
         {/* Add Event Modal */}
         {showAddModal && (
@@ -217,25 +255,63 @@ export default function CalendarPage() {
               <div className="modal-content">
                 <div className="modal-header">
                   <h4 className="modal-title">Create New Event</h4>
-                  <button type="button" className="btn-close" onClick={() => setShowAddModal(false)}></button>
+                  <button
+                    type="button"
+                    className="btn-close"
+                    onClick={() => setShowAddModal(false)}
+                  ></button>
                 </div>
                 <div className="modal-body">
                   <label>Event name</label>
-                  <input type="text" className="form-control mb-2"
-                    value={newEvent.title} onChange={(e) => setNewEvent({ ...newEvent, title: e.target.value })} />
+                  <input
+                    type="text"
+                    className="form-control mb-2"
+                    value={newEvent.title}
+                    onChange={(e) =>
+                      setNewEvent({ ...newEvent, title: e.target.value })
+                    }
+                  />
                   <label>Start Date</label>
-                  <input type="datetime-local" className="form-control mb-2"
-                    value={newEvent.start} onChange={(e) => setNewEvent({ ...newEvent, start: e.target.value })} />
+                  <input
+                    type="datetime-local"
+                    className="form-control mb-2"
+                    value={newEvent.start}
+                    onChange={(e) =>
+                      setNewEvent({ ...newEvent, start: e.target.value })
+                    }
+                  />
                   <label>End Date</label>
-                  <input type="datetime-local" className="form-control mb-2"
-                    value={newEvent.end} onChange={(e) => setNewEvent({ ...newEvent, end: e.target.value })} />
+                  <input
+                    type="datetime-local"
+                    className="form-control mb-2"
+                    value={newEvent.end}
+                    onChange={(e) =>
+                      setNewEvent({ ...newEvent, end: e.target.value })
+                    }
+                  />
                   <label>Event Description</label>
-                  <textarea className="form-control" rows="4"
-                    value={newEvent.description} onChange={(e) => setNewEvent({ ...newEvent, description: e.target.value })}></textarea>
+                  <textarea
+                    className="form-control"
+                    rows="4"
+                    value={newEvent.description}
+                    onChange={(e) =>
+                      setNewEvent({ ...newEvent, description: e.target.value })
+                    }
+                  ></textarea>
                 </div>
                 <div className="modal-footer">
-                  <button className="btn btn-secondary" onClick={() => setShowAddModal(false)}>Cancel</button>
-                  <button className="btn btn-primary" onClick={handleSaveEvent}>Create Event</button>
+                  <button
+                    className="btn btn-secondary"
+                    onClick={() => setShowAddModal(false)}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    className="btn btn-primary"
+                    onClick={handleSaveEvent}
+                  >
+                    Create Event
+                  </button>
                 </div>
               </div>
             </div>
@@ -249,23 +325,51 @@ export default function CalendarPage() {
               <div className="modal-content">
                 <div className="modal-header">
                   <h4 className="modal-title">Edit Event</h4>
-                  <button type="button" className="btn-close" onClick={() => setShowViewModal(false)}></button>
+                  <button
+                    type="button"
+                    className="btn-close"
+                    onClick={() => setShowViewModal(false)}
+                  ></button>
                 </div>
                 <div className="modal-body">
                   <label>Event name</label>
-                  <input type="text" className="form-control mb-2"
+                  <input
+                    type="text"
+                    className="form-control mb-2"
                     value={currentEvent.title}
-                    onChange={(e) => { currentEvent.setProp("title", e.target.value); setCurrentEvent({ ...currentEvent }); }} />
+                    onChange={(e) => {
+                      currentEvent.setProp("title", e.target.value);
+                      setCurrentEvent({ ...currentEvent });
+                    }}
+                  />
                   <label>Description</label>
-                  <textarea className="form-control mb-2"
+                  <textarea
+                    className="form-control mb-2"
                     value={currentEvent.extendedProps.description || ""}
-                    onChange={(e) => { currentEvent.setExtendedProp("description", e.target.value); setCurrentEvent({ ...currentEvent }); }}></textarea>
+                    onChange={(e) => {
+                      currentEvent.setExtendedProp(
+                        "description",
+                        e.target.value
+                      );
+                      setCurrentEvent({ ...currentEvent });
+                    }}
+                  ></textarea>
                 </div>
                 <div className="modal-footer">
                   {permission !== "Viewer" && (
                     <>
-                      <button className="btn btn-danger" onClick={handleRemoveEvent}>Remove Event</button>
-                      <button className="btn btn-primary" onClick={handleUpdateEvent}>Save Changes</button>
+                      <button
+                        className="btn btn-danger"
+                        onClick={handleRemoveEvent}
+                      >
+                        Remove Event
+                      </button>
+                      <button
+                        className="btn btn-primary"
+                        onClick={handleUpdateEvent}
+                      >
+                        Save Changes
+                      </button>
                     </>
                   )}
                 </div>

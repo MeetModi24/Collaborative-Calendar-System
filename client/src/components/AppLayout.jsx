@@ -14,7 +14,6 @@ export default function AppLayout({ children }) {
   const [showProfileSettingsModal, setShowProfileSettingsModal] = useState(false);
   const [showInvitesModal, setShowInvitesModal] = useState(false);
 
-  // ✅ Add Flash Message Handler
   const addFlashMessage = useCallback((type, message) => {
     setFlashMessages((prev) => [...prev, [type, message]]);
   }, []);
