@@ -92,9 +92,48 @@ export default function CalendarPage() {
   };
 
   const handleEventClick = (info) => {
-    setCurrentEvent(info.event);
-    setShowViewModal(true);
+  // 1. Remove existing popovers (fc-more-popover)
+  document.querySelectorAll(".fc-more-popover").forEach((el) => el.remove());
+
+  // 2. Hide bootstrap tooltip if any
+  const tooltip = Tooltip.getInstance(info.el);
+  if (tooltip) {
+    tooltip.hide();
+  }
+
+  // 3. Extract event data & participants safely
+  const event = info.event;
+  const participants = event.extendedProps.participants
+    ? [...event.extendedProps.participants]
+    : [];
+  const pendingParticipants = event.extendedProps.pending_participants
+    ? [...event.extendedProps.pending_participants]
+    : [];
+
+  // 4. Prepare a new event object with extended props and participants
+  //    We shallow copy event because FullCalendar event objects are complex,
+  //    but for editing and rendering modal, this is enough.
+  const eventForModal = {
+    id: event.id,
+    title: event.title,
+    start: event.start,
+    end: event.end,
+    extendedProps: {
+      ...event.extendedProps,
+      participants,
+      pending_participants: pendingParticipants,
+    },
+    setProp: event.setProp.bind(event),
+    setExtendedProp: event.setExtendedProp.bind(event),
+    startStr: event.startStr,
+    endStr: event.endStr,
   };
+
+  // 5. Save to React state and open modal
+  setCurrentEvent(eventForModal);
+  setShowViewModal(true);
+};
+
 
   const handleSaveEvent = () => {
     if (!newEvent.title || !newEvent.start || !newEvent.end) return;
