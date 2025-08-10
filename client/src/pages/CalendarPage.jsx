@@ -16,6 +16,7 @@ import CreateGroupModal from "../components/CreateGroupModal";
 import AppLayout from "../components/AppLayout";
 import { useFlash } from "../context/FlashContext";
 
+import ParticipantsList from '../components/ParticipantsList'; 
 
 import { useDispatch, useSelector } from "react-redux";
 import {
@@ -56,6 +57,20 @@ export default function CalendarPage() {
 
   const [currentEvent, setCurrentEvent] = useState(null);
 
+  // Controls visibility and editability as per showEventModal logic
+  const [participantSectionVisible, setParticipantSectionVisible] = useState(false);
+  const [participantSelectVisible, setParticipantSelectVisible] = useState(false);
+  const [modalCloseBtnVisible, setModalCloseBtnVisible] = useState(true);
+
+  const [startDateReadOnly, setStartDateReadOnly] = useState(true);
+  const [startTimeReadOnly, setStartTimeReadOnly] = useState(true);
+  const [endDateReadOnly, setEndDateReadOnly] = useState(true);
+  const [endTimeReadOnly, setEndTimeReadOnly] = useState(true);
+
+  const [titleEditable, setTitleEditable] = useState(false);
+  const [descriptionEditable, setDescriptionEditable] = useState(false);
+
+
   // Fetch groups on mount
   useEffect(() => {
     fetch("/api/groups/list", { credentials: "include" })
@@ -92,47 +107,99 @@ export default function CalendarPage() {
   };
 
   const handleEventClick = (info) => {
-  // 1. Remove existing popovers (fc-more-popover)
-  document.querySelectorAll(".fc-more-popover").forEach((el) => el.remove());
+    // 1. Remove existing popovers (fc-more-popover)
+    document.querySelectorAll(".fc-more-popover").forEach((el) => el.remove());
 
-  // 2. Hide bootstrap tooltip if any
-  const tooltip = Tooltip.getInstance(info.el);
-  if (tooltip) {
-    tooltip.hide();
-  }
+    // 2. Hide bootstrap tooltip if any
+    const tooltip = Tooltip.getInstance(info.el);
+    if (tooltip) {
+      tooltip.hide();
+    }
 
-  // 3. Extract event data & participants safely
-  const event = info.event;
-  const participants = event.extendedProps.participants
-    ? [...event.extendedProps.participants]
-    : [];
-  const pendingParticipants = event.extendedProps.pending_participants
-    ? [...event.extendedProps.pending_participants]
-    : [];
+    const event = info.event;
+    const participants = event.extendedProps.participants
+      ? [...event.extendedProps.participants]
+      : [];
+    const pendingParticipants = event.extendedProps.pending_participants
+      ? [...event.extendedProps.pending_participants]
+      : [];
 
-  // 4. Prepare a new event object with extended props and participants
-  //    We shallow copy event because FullCalendar event objects are complex,
-  //    but for editing and rendering modal, this is enough.
-  const eventForModal = {
-    id: event.id,
-    title: event.title,
-    start: event.start,
-    end: event.end,
-    extendedProps: {
-      ...event.extendedProps,
-      participants,
-      pending_participants: pendingParticipants,
-    },
-    setProp: event.setProp.bind(event),
-    setExtendedProp: event.setExtendedProp.bind(event),
-    startStr: event.startStr,
-    endStr: event.endStr,
+    // Prepare event object for modal editing
+    const eventForModal = {
+      id: event.id,
+      title: event.title,
+      start: event.start,
+      end: event.end,
+      extendedProps: {
+        ...event.extendedProps,
+        participants,
+        pending_participants: pendingParticipants,
+      },
+      setProp: event.setProp.bind(event),
+      setExtendedProp: event.setExtendedProp.bind(event),
+      startStr: event.startStr,
+      endStr: event.endStr,
+    };
+
+    // Determine permissions and UI flags
+    const groupId = selectedGroup; // from state
+    const groupPermission = event.extendedProps.event_edit_permission || "Viewer";
+
+    if (groupId !== 1) {
+      setParticipantSectionVisible(true);
+      if (groupPermission !== "Viewer") {
+        setParticipantSelectVisible(true);
+        setModalCloseBtnVisible(false);
+        setStartDateReadOnly(false);
+        setStartTimeReadOnly(false);
+        setEndDateReadOnly(false);
+        setEndTimeReadOnly(false);
+        setTitleEditable(true);
+        setDescriptionEditable(true);
+      } else {
+        setParticipantSelectVisible(false);
+        setModalCloseBtnVisible(true);
+        setStartDateReadOnly(true);
+        setStartTimeReadOnly(true);
+        setEndDateReadOnly(true);
+        setEndTimeReadOnly(true);
+        setTitleEditable(false);
+        setDescriptionEditable(false);
+      }
+      // setupParticipantsSection logic can be ported here if needed
+    } else {
+      if (event.extendedProps.event_type === "group") {
+        setParticipantSectionVisible(true);
+        // setupParticipantsSection logic with 'Viewer' permission here if needed
+        setParticipantSelectVisible(false);
+        setStartDateReadOnly(true);
+        setStartTimeReadOnly(true);
+        setEndDateReadOnly(true);
+        setEndTimeReadOnly(true);
+        setTitleEditable(false);
+        setDescriptionEditable(false);
+        setModalCloseBtnVisible(true);
+      } else {
+        setParticipantSectionVisible(false);
+        setParticipantSelectVisible(false);
+        setStartDateReadOnly(false);
+        setStartTimeReadOnly(false);
+        setEndDateReadOnly(false);
+        setEndTimeReadOnly(false);
+        setTitleEditable(true);
+        setDescriptionEditable(true);
+        setModalCloseBtnVisible(false);
+      }
+    }
+
+    // Save event and open modal
+    setCurrentEvent(eventForModal);
+    setShowViewModal(true);
+
+    // Prevent default FullCalendar navigation
+    info.jsEvent.preventDefault();
   };
 
-  // 5. Save to React state and open modal
-  setCurrentEvent(eventForModal);
-  setShowViewModal(true);
-};
 
 
   const handleSaveEvent = () => {
@@ -301,7 +368,7 @@ export default function CalendarPage() {
 
         {/* Add Event Modal */}
         {showAddModal && (
-          <div className="modal show d-block" tabIndex="-1">
+          <div className="modal show d-block" tabIndex="-1" role="dialog" aria-modal="true">
             <div className="modal-dialog">
               <div className="modal-content">
                 <div className="modal-header">
@@ -310,6 +377,7 @@ export default function CalendarPage() {
                     type="button"
                     className="btn-close"
                     onClick={() => setShowAddModal(false)}
+                    aria-label="Close"
                   ></button>
                 </div>
                 <div className="modal-body">
@@ -368,7 +436,7 @@ export default function CalendarPage() {
 
         {/* View/Edit Modal */}
         {showViewModal && currentEvent && (
-          <div className="modal show d-block" tabIndex="-1">
+          <div className="modal show d-block" tabIndex="-1" role="dialog" aria-modal="true">
             <div className="modal-dialog">
               <div className="modal-content">
                 <div className="modal-header">
@@ -377,34 +445,145 @@ export default function CalendarPage() {
                     type="button"
                     className="btn-close"
                     onClick={() => setShowViewModal(false)}
+                    aria-label="Close"
                   ></button>
                 </div>
                 <div className="modal-body">
-                  <label>Event name</label>
+                  {/* Participants Section */}
+                  {participantSectionVisible && (
+                    <div id="participants-section" className="mb-3">
+                      <p><strong>Participants:</strong></p>
+                      {/* Render the imported ParticipantsList component here */}
+                      <ParticipantsList event={currentEvent} permission={permission} />
+                    </div>
+                  )}
+                  {/* Editable Event Name */}
+                  {titleEditable ? (
+                    <input
+                      type="text"
+                      className="form-control mb-2"
+                      value={currentEvent.title}
+                      onChange={(e) => {
+                        currentEvent.setProp("title", e.target.value);
+                        setCurrentEvent({ ...currentEvent });
+                      }}
+                    />
+                  ) : (
+                    <div
+                      className="form-control mb-2"
+                      style={{ backgroundColor: "#e9ecef" }}
+                      aria-readonly="true"
+                    >
+                      {currentEvent.title}
+                    </div>
+                  )}
+
+                  {/* Editable Description */}
+                  {descriptionEditable ? (
+                    <textarea
+                      className="form-control mb-2"
+                      value={currentEvent.extendedProps.description || ""}
+                      onChange={(e) => {
+                        currentEvent.setExtendedProp("description", e.target.value);
+                        setCurrentEvent({ ...currentEvent });
+                      }}
+                    />
+                  ) : (
+                    <div
+                      className="form-control mb-2"
+                      style={{ backgroundColor: "#e9ecef", minHeight: "100px" }}
+                      aria-readonly="true"
+                    >
+                      {currentEvent.extendedProps.description || "No description"}
+                    </div>
+                  )}
+
+                  {/* Start Date/Time Inputs */}
+                  <label>Start Date</label>
                   <input
-                    type="text"
+                    type="date"
                     className="form-control mb-2"
-                    value={currentEvent.title}
+                    readOnly={startDateReadOnly}
+                    value={
+                      currentEvent.start
+                        ? currentEvent.start.toISOString().substring(0, 10)
+                        : ""
+                    }
                     onChange={(e) => {
-                      currentEvent.setProp("title", e.target.value);
+                      const newDate = e.target.value;
+                      const startTime = currentEvent.start
+                        ? currentEvent.start.toISOString().substring(11, 16)
+                        : "00:00";
+                      const newStart = new Date(`${newDate}T${startTime}:00Z`);
+                      currentEvent.setProp("start", newStart);
                       setCurrentEvent({ ...currentEvent });
                     }}
                   />
-                  <label>Description</label>
-                  <textarea
+                  <label>Start Time</label>
+                  <input
+                    type="time"
                     className="form-control mb-2"
-                    value={currentEvent.extendedProps.description || ""}
+                    readOnly={startTimeReadOnly}
+                    value={
+                      currentEvent.start
+                        ? currentEvent.start.toISOString().substring(11, 16)
+                        : ""
+                    }
                     onChange={(e) => {
-                      currentEvent.setExtendedProp(
-                        "description",
-                        e.target.value
-                      );
+                      const newTime = e.target.value;
+                      const startDate = currentEvent.start
+                        ? currentEvent.start.toISOString().substring(0, 10)
+                        : "";
+                      const newStart = new Date(`${startDate}T${newTime}:00Z`);
+                      currentEvent.setProp("start", newStart);
                       setCurrentEvent({ ...currentEvent });
                     }}
-                  ></textarea>
+                  />
+
+                  {/* End Date/Time Inputs */}
+                  <label>End Date</label>
+                  <input
+                    type="date"
+                    className="form-control mb-2"
+                    readOnly={endDateReadOnly}
+                    value={
+                      currentEvent.end
+                        ? currentEvent.end.toISOString().substring(0, 10)
+                        : ""
+                    }
+                    onChange={(e) => {
+                      const newDate = e.target.value;
+                      const endTime = currentEvent.end
+                        ? currentEvent.end.toISOString().substring(11, 16)
+                        : "00:00";
+                      const newEnd = new Date(`${newDate}T${endTime}:00Z`);
+                      currentEvent.setProp("end", newEnd);
+                      setCurrentEvent({ ...currentEvent });
+                    }}
+                  />
+                  <label>End Time</label>
+                  <input
+                    type="time"
+                    className="form-control mb-2"
+                    readOnly={endTimeReadOnly}
+                    value={
+                      currentEvent.end
+                        ? currentEvent.end.toISOString().substring(11, 16)
+                        : ""
+                    }
+                    onChange={(e) => {
+                      const newTime = e.target.value;
+                      const endDate = currentEvent.end
+                        ? currentEvent.end.toISOString().substring(0, 10)
+                        : "";
+                      const newEnd = new Date(`${endDate}T${newTime}:00Z`);
+                      currentEvent.setProp("end", newEnd);
+                      setCurrentEvent({ ...currentEvent });
+                    }}
+                  />
                 </div>
                 <div className="modal-footer">
-                  {permission !== "Viewer" && (
+                  {permission !== "Viewer" ? (
                     <>
                       <button
                         className="btn btn-danger"
@@ -419,12 +598,21 @@ export default function CalendarPage() {
                         Save Changes
                       </button>
                     </>
+                  ) : (
+                    <button
+                      type="button"
+                      className="btn btn-secondary"
+                      onClick={() => setShowViewModal(false)}
+                    >
+                      Close
+                    </button>
                   )}
                 </div>
               </div>
             </div>
           </div>
         )}
+
       </div>
     </AppLayout>
   );
