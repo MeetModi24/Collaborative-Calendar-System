@@ -1,5 +1,6 @@
 // src/components/InvitesModal.jsx
 import React from 'react';
+import { getInitials, getAvatarColor } from '../utils/helpers';
 
 export default function InvitesModal({ show, onClose, invites = [] }) {
   if (!show) return null;
@@ -22,13 +23,37 @@ export default function InvitesModal({ show, onClose, invites = [] }) {
           </div>
 
           {/* Body */}
-          <div className="modal-body text-center py-4">
+          <div className="modal-body">
             {invites.length === 0 ? (
-              <p className="text-muted">No pending invitations</p>
+              <p className="text-muted text-center py-4">
+                No pending invitations
+              </p>
             ) : (
               invites.map((invite, index) => (
-                <div key={index} className="mb-2">
-                  <strong>{invite.groupName}</strong> - {invite.fromEmail}
+                <div
+                  key={index}
+                  className="d-flex align-items-center p-2 border-bottom"
+                >
+                  {/* Avatar */}
+                  <div
+                    className="rounded-circle d-flex align-items-center justify-content-center text-white me-3"
+                    style={{
+                      width: '40px',
+                      height: '40px',
+                      backgroundColor: getAvatarColor(invite.fromName || invite.fromEmail),
+                      fontSize: '14px',
+                      fontWeight: 'bold',
+                      flexShrink: 0
+                    }}
+                  >
+                    {getInitials(invite.fromName || invite.fromEmail)}
+                  </div>
+
+                  {/* Invitation Details */}
+                  <div className="flex-grow-1">
+                    <div className="fw-bold">{invite.groupName}</div>
+                    <small className="text-muted">From: {invite.fromEmail}</small>
+                  </div>
                 </div>
               ))
             )}
