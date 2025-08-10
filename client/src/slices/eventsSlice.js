@@ -66,6 +66,8 @@ const calendarCache = {
 };
 
 // ---- Async Thunks ----
+
+// Fetch events for a group
 export const fetchEvents = createAsyncThunk(
   "events/fetchEvents",
   async (groupId) => {
@@ -74,10 +76,11 @@ export const fetchEvents = createAsyncThunk(
       return { groupId, events: cached.data, fromCache: true };
     }
 
-    const res = await fetch(`/api/groups/${groupId}/events`, {
+    const res = await fetch(`http://127.0.0.1:5000/api/groups/${groupId}/events`, {
       credentials: "include",
     });
     const data = await res.json();
+
     const mapped = data.events.map((ev) => ({
       id: ev.event_id,
       title: ev.event_name,
@@ -86,6 +89,7 @@ export const fetchEvents = createAsyncThunk(
       description: ev.description,
       participants: ev.participants,
       status: ev.status || "approved",
+      version: ev.version || 0,
     }));
 
     calendarCache.set(groupId, mapped);
@@ -93,10 +97,11 @@ export const fetchEvents = createAsyncThunk(
   }
 );
 
+// Add a new event
 export const addEvent = createAsyncThunk(
   "events/addEvent",
   async ({ groupId, eventData }) => {
-    const res = await fetch("/api/groups/add_event", {
+    const res = await fetch("http://127.0.0.1:5000/api/groups/add_event", {
       method: "POST",
       credentials: "include",
       headers: { "Content-Type": "application/json" },
@@ -108,6 +113,7 @@ export const addEvent = createAsyncThunk(
     const newEv = {
       id: data.event_id || Date.now(),
       ...eventData,
+      version: 0,
     };
 
     const cached = calendarCache.get(groupId)?.data || [];
@@ -117,14 +123,25 @@ export const addEvent = createAsyncThunk(
   }
 );
 
+// Update an existing event
 export const updateEvent = createAsyncThunk(
   "events/updateEvent",
   async ({ groupId, eventId, updates }) => {
-    const res = await fetch(`/api/groups/update_event/${eventId}`, {
+    const payload = {
+      title: updates.title,
+      description: updates.description,
+      start: updates.start,
+      end: updates.end,
+      participants: updates.participants || [],
+      group_id: groupId,
+      version: updates.version || 0,
+    };
+
+    const res = await fetch(`http://127.0.0.1:5000/api/groups/update_event/${eventId}`, {
       method: "PUT",
       credentials: "include",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...updates, group_id: groupId }),
+      body: JSON.stringify(payload),
     });
     const data = await res.json();
     if (data.error) throw new Error(data.error);
@@ -139,10 +156,11 @@ export const updateEvent = createAsyncThunk(
   }
 );
 
+// Remove an event
 export const removeEvent = createAsyncThunk(
   "events/removeEvent",
   async ({ groupId, eventId }) => {
-    const res = await fetch(`/api/groups/remove_event/${eventId}`, {
+    const res = await fetch(`http://127.0.0.1:5000/api/groups/remove_event/${eventId}`, {
       method: "DELETE",
       credentials: "include",
     });
