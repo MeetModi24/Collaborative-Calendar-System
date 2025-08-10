@@ -1,223 +1,229 @@
 import React, { useState, useEffect } from "react";
+import Modal from "react-bootstrap/Modal";
+import Button from "react-bootstrap/Button";
 import { useFlash } from "../context/FlashContext";
 
-export default function CreateGroupModal({ show, onClose }) {
+export default function ProfileSettingsModal({ show, onClose }) {
   const { addFlashMessage } = useFlash();
 
-  const [groupName, setGroupName] = useState("");
-  const [description, setDescription] = useState("");
-  const [email, setEmail] = useState("");
-  const [role, setRole] = useState("Editor");
-  const [members, setMembers] = useState([]);
-  const [error, setError] = useState("");
+  // Form state
+  const [form, setForm] = useState({ name: "", email: "", password: "" });
+
+  // Validation errors state
+  const [errors, setErrors] = useState({ name: "", email: "", password: "" });
+
+  // Password visibility toggle
+  const [showPassword, setShowPassword] = useState(false);
+
+  // Loading states
+  const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  // Validation functions (same as your original code)
+  const validateName = (name) => {
+    if (!name.trim()) return "Username cannot be empty";
+    return "";
+  };
 
-  // Clear error when inputs change
+  const validateEmail = (email) => {
+    const emailRegex =
+      /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
+    if (!emailRegex.test(email.trim())) return "Invalid email address";
+    return "";
+  };
+
+  const validatePassword = (password) => {
+    if (!password) return ""; // password optional
+    if (password.length < 8) return "Password must be at least 8 characters";
+    if (!/\d/.test(password)) return "Password must have at least one digit";
+    if (!/[a-z]/.test(password))
+      return "Password must have at least one lowercase character";
+    if (!/[A-Z]/.test(password))
+      return "Password must have at least one uppercase character";
+    if (!/[!@#$%^&*()_+\-=\[\]{};':\"\\|,.<>\/?]/.test(password))
+      return "Password must have at least one special character";
+    return "";
+  };
+
+  // Fetch user profile from Flask backend on modal open
   useEffect(() => {
-    if (error) setError("");
-  }, [email, groupName, role]);
+    if (show) {
+      setLoading(true);
+      fetch("/user_profile", {
+        method: "GET",
+        credentials: "include",
+        headers: {
+          Accept: "application/json",
+        },
+      })
+        .then(async (res) => {
+          if (!res.ok) {
+            const errText = await res.text();
+            throw new Error(errText || "Failed to fetch user profile");
+          }
+          return res.json();
+        })
+        .then((data) => {
+          setForm({
+            name: data.name || "",
+            email: data.email || "",
+            password: "",
+          });
+          setErrors({ name: "", email: "", password: "" });
+        })
+        .catch((err) => {
+          addFlashMessage("danger", "Error fetching profile: " + err.message);
+          onClose();
+        })
+        .finally(() => setLoading(false));
+    }
+  }, [show, addFlashMessage, onClose]);
 
-  const handleAddMember = () => {
-    const trimmedEmail = email.trim().toLowerCase();
-    if (!emailRegex.test(trimmedEmail)) {
-      setError("Please enter a valid email");
-      return;
-    }
-    if (members.find((m) => m.email === trimmedEmail)) {
-      setError("Member already added");
-      return;
-    }
-    setMembers([...members, { email: trimmedEmail, role }]);
-    setEmail("");
-    setRole("EDITOR");
-    setError("");
+  // Handle form field changes & validations
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+
+    setForm((prev) => ({ ...prev, [name]: value }));
+
+    // validate each field live
+    if (name === "name") setErrors((prev) => ({ ...prev, name: validateName(value) }));
+    else if (name === "email") setErrors((prev) => ({ ...prev, email: validateEmail(value) }));
+    else if (name === "password")
+      setErrors((prev) => ({ ...prev, password: validatePassword(value) }));
   };
 
-  const removeMember = (emailToRemove) => {
-    setMembers(members.filter((m) => m.email !== emailToRemove));
+  // Validate all fields before submission
+  const validateAll = () => {
+    const nameError = validateName(form.name);
+    const emailError = validateEmail(form.email);
+    const passwordError = validatePassword(form.password);
+
+    setErrors({ name: nameError, email: emailError, password: passwordError });
+
+    return !nameError && !emailError && !passwordError;
   };
 
-  const handleCreateGroup = async () => {
-    const trimmedGroupName = groupName.trim();
-    if (!trimmedGroupName) {
-      addFlashMessage("danger", "Group name is required.");
-      return;
-    }
-    if (submitting) return;
+  // Submit updated profile to Flask backend POST /user_profile
+  const handleSubmit = () => {
+    if (!validateAll()) return;
 
     setSubmitting(true);
 
-    try {
-      const payload = {
-        name: trimmedGroupName,
-        description: description.trim(),
-        members: members.map((m) => m.email),
-        permissions: members.map((m) => m.role),
-      };
-
-      const res = await fetch("http://127.0.0.1:5000/api/groups/create_group", {
-        method: "POST",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+    fetch("/user_profile", {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: form.name.trim(),
+        email: form.email.trim(),
+        password: form.password,
+      }),
+    })
+      .then(async (res) => {
+        if (!res.ok) {
+          const errText = await res.text();
+          throw new Error(errText || "Failed to update profile");
+        }
+        return res.json();
+      })
+      .then((data) => {
+        addFlashMessage("success", "Profile updated successfully.");
+        onClose();
+        // Clear password field after successful update
+        setForm((prev) => ({ ...prev, password: "" }));
+        setErrors((prev) => ({ ...prev, password: "" }));
+        setShowPassword(false);
+      })
+      .catch((err) => {
+        addFlashMessage("danger", "Error updating profile: " + err.message);
+      })
+      .finally(() => {
+        setSubmitting(false);
       });
-
-      if (!res.ok) {
-        const text = await res.text();
-        throw new Error(text || "Failed to create group");
-      }
-
-      const data = await res.json();
-
-      if (data.emails?.length) {
-        addFlashMessage("danger", "No users found: " + data.emails.join(", "));
-      } else {
-        addFlashMessage("success", "Group created successfully!");
-        // Clear form on success
-        setGroupName("");
-        setDescription("");
-        setMembers([]);
-      }
-
-      onClose();
-    } catch (err) {
-      console.error("Error creating group:", err);
-      addFlashMessage("danger", "Something went wrong: " + err.message);
-    } finally {
-      setSubmitting(false);
-    }
   };
 
   if (!show) return null;
 
   return (
-    <div
-      className="modal d-block"
-      tabIndex="-1"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="createGroupModalLabel"
-      style={{ backgroundColor: "rgba(0,0,0,0.5)" }}
-    >
-      <div className="modal-dialog" role="document">
-        <div className="modal-content" aria-live="polite">
-          <div className="modal-header">
-            <h5 className="modal-title" id="createGroupModalLabel">
-              Create New Group
-            </h5>
-            <button
-              type="button"
-              className="btn-close"
-              aria-label="Close"
-              onClick={onClose}
-              disabled={submitting}
-            />
-          </div>
-          <div className="modal-body">
-            <label htmlFor="groupNameInput" className="form-label fw-bold">
-              Group Name
+    <Modal show={show} onHide={onClose} centered backdrop="static" keyboard={!submitting}>
+      <Modal.Header closeButton={!submitting}>
+        <Modal.Title>Profile Settings</Modal.Title>
+      </Modal.Header>
+
+      <Modal.Body>
+        {loading ? (
+          <div>Loading profile...</div>
+        ) : (
+          <>
+            <label htmlFor="nameInput" className="fw-bold mb-1">
+              Name
             </label>
             <input
-              id="groupNameInput"
-              type="text"
-              className="form-control mb-3"
-              value={groupName}
-              onChange={(e) => setGroupName(e.target.value)}
+              id="nameInput"
+              name="name"
+              className={`form-control mb-3 ${errors.name ? "is-invalid" : ""}`}
+              value={form.name}
+              onChange={handleChange}
               disabled={submitting}
               autoFocus
             />
+            {errors.name && <div className="invalid-feedback">{errors.name}</div>}
 
-            <label htmlFor="groupDescriptionInput" className="form-label fw-bold">
-              Description
+            <label htmlFor="emailInput" className="fw-bold mb-1">
+              Email
             </label>
-            <textarea
-              id="groupDescriptionInput"
-              className="form-control mb-3"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
+            <input
+              id="emailInput"
+              name="email"
+              type="email"
+              className={`form-control mb-3 ${errors.email ? "is-invalid" : ""}`}
+              value={form.email}
+              onChange={handleChange}
               disabled={submitting}
-              rows={5}
-              style={{ resize: "vertical" }}
             />
+            {errors.email && <div className="invalid-feedback">{errors.email}</div>}
 
-            <label htmlFor="memberEmailInput" className="form-label fw-bold">
-              Members
+            <label htmlFor="passwordInput" className="fw-bold mb-1">
+              Password
             </label>
-            <div className="input-group mb-2">
-              <input
-                id="memberEmailInput"
-                type="email"
-                className={`form-control ${error ? "is-invalid" : ""}`}
-                placeholder="Enter email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                disabled={submitting}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    handleAddMember();
-                  }
-                }}
-              />
-              <select
-                className="form-select"
-                value={role}
-                onChange={(e) => setRole(e.target.value)}
-                disabled={submitting}
-              >
-                <option value="Editor">EDITOR</option>
-                <option value="Viewer">VIEWER</option>
-                <option value="Admin">ADMIN</option>
-              </select>
-              <button
-                className="btn btn-dark"
-                type="button"
-                onClick={handleAddMember}
-                disabled={submitting}
-              >
-                ADD +
-              </button>
-            </div>
-            {error && <div className="text-danger mb-2">{error}</div>}
+            <input
+              id="passwordInput"
+              name="password"
+              type={showPassword ? "text" : "password"}
+              className={`form-control mb-2 ${errors.password ? "is-invalid" : ""}`}
+              value={form.password}
+              onChange={handleChange}
+              disabled={submitting}
+              placeholder="Enter new password or leave blank"
+              autoComplete="new-password"
+            />
+            {errors.password && <div className="invalid-feedback">{errors.password}</div>}
 
-            <div className="d-flex flex-wrap gap-2" aria-live="polite" aria-relevant="additions removals">
-              {members.map((m) => (
-                <span
-                  className="badge bg-dark d-flex align-items-center"
-                  key={m.email}
-                >
-                  {m.email} ({m.role})
-                  <button
-                    type="button"
-                    className="btn-close btn-close-white ms-2"
-                    aria-label={`Remove member ${m.email}`}
-                    onClick={() => removeMember(m.email)}
-                    disabled={submitting}
-                  />
-                </span>
-              ))}
+            <div className="form-check mt-1">
+              <input
+                id="showPasswordToggle"
+                type="checkbox"
+                className="form-check-input"
+                checked={showPassword}
+                onChange={() => setShowPassword((prev) => !prev)}
+                disabled={submitting}
+              />
+              <label className="form-check-label text-success" htmlFor="showPasswordToggle">
+                Show Password
+              </label>
             </div>
-          </div>
-          <div className="modal-footer">
-            <button
-              className="btn btn-secondary"
-              onClick={onClose}
-              disabled={submitting}
-            >
-              CANCEL
-            </button>
-            <button
-              className="btn btn-dark"
-              onClick={handleCreateGroup}
-              disabled={submitting}
-            >
-              {submitting ? "Creating..." : "CREATE GROUP"}
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
+          </>
+        )}
+      </Modal.Body>
+
+      <Modal.Footer>
+        <Button variant="secondary" onClick={onClose} disabled={submitting}>
+          Cancel
+        </Button>
+        <Button variant="primary" onClick={handleSubmit} disabled={submitting || loading}>
+          {submitting ? "Saving..." : "Save Changes"}
+        </Button>
+      </Modal.Footer>
+    </Modal>
   );
 }
