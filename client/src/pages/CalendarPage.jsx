@@ -132,16 +132,29 @@ export default function CalendarPage() {
 
   // Bootstrap tooltip + pending opacity
   const handleEventDidMount = (info) => {
-    new Tooltip(info.el, {
-      title: info.event.extendedProps.description || info.event.title,
-      placement: "top",
-      trigger: "hover",
-      container: "body",
-    });
-    if (info.event.extendedProps.status === "pending") {
-      info.el.style.opacity = "0.5";
+    if (info.event.extendedProps.description) {
+      let tooltip = Tooltip.getInstance(info.el);
+      if (tooltip) {
+        tooltip.dispose();
+      }
+
+      const desc = info.event.extendedProps.description;
+      tooltip = new Tooltip(info.el, {
+        title: desc.length > 200 ? desc.substring(0, 200) + "..." : desc,
+        placement: "top",
+        trigger: "hover",
+        html: true,
+        customClass: "multiline-tooltip",
+        container: "body",
+      });
+    }
+
+    if (info.event.extendedProps.is_pending_for_current_user) {
+      info.el.style.opacity = "0.6";
     }
   };
+
+
 
   return (
     <AppLayout>
@@ -156,8 +169,13 @@ export default function CalendarPage() {
                 value={selectedGroup}
                 onChange={(e) => setSelectedGroup(Number(e.target.value))}
               >
+                <option id="group-select-option-1" value={1}>Dashboard</option>
                 {groups.map((g) => (
-                  <option key={g.id} value={g.id}>
+                  <option
+                    key={g.id}
+                    id={`group-select-option-${g.id}`}
+                    value={g.id}
+                  >
                     {g.name}
                   </option>
                 ))}
@@ -183,8 +201,30 @@ export default function CalendarPage() {
                 bootstrap5Plugin,
               ]}
               initialView="dayGridMonth"
+              timeZone="UTC"
               themeSystem="bootstrap5"
+              headerToolbar={{
+                left: "prev,next today",
+                center: "title",
+                right: "dayGridMonth,timeGridWeek,timeGridDay,listMonth",
+              }}
+              buttonText={{
+                today: "Today",
+                month: "Month",
+                week: "Week",
+                day: "Day",
+                list: "List",
+              }}
+              weekNumbers={true}
+              dayMaxEvents={true}
+              eventTimeFormat={{
+                hour: "numeric",
+                minute: "2-digit",
+                hour12: true,
+                meridiem: "short",
+              }}
               selectable={permission !== "Viewer"}
+              nowIndicator={true}
               editable={permission !== "Viewer"}
               events={events}
               dateClick={permission !== "Viewer" ? handleDateClick : null}
