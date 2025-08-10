@@ -234,3 +234,111 @@ export const selectEventsStatus = (state) => state.events.status;
 
 export const { clearAllCache, clearGroupCache } = eventsSlice.actions;
 export default eventsSlice.reducer;
+
+// ---- FullCalendar Events Fetch Callback ----
+export const fullCalendarEventsLoader = (fetchInfo, successCallback, failureCallback) => {
+  return async (dispatch, getState) => {
+    try {
+      const groupId = fetchInfo.groupId || document.getElementById("group-select")?.value;
+      if (!groupId) {
+        failureCallback(new Error("No group selected"));
+        return;
+      }
+
+      // 1️⃣ Try cache first
+      const cachedObj = calendarCache.get(groupId);
+      if (cachedObj) {
+        const cachedData = cachedObj.data;
+
+        // Prepare version map like in original JS
+        const versionMap = cachedData.map(ev => ({
+          event_id: ev.id,
+          cache_number: ev.version || 0
+        }));
+
+        // Request only updated events
+        const res = await fetch(`http://127.0.0.1:5000/api/groups/${groupId}/updates`, {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ events: versionMap })
+        });
+
+        const updates = await res.json();
+        if (!res.ok) throw new Error(updates.error || "Failed to fetch updates");
+
+        const { updated_events = [], deleted_events = [] } = updates;
+
+        // Remove deleted events from cache
+        deleted_events.forEach(deletedId => {
+          calendarCache.clearEvent(groupId, deletedId);
+        });
+
+        // Merge updated/new events into cached
+        let mergedData = cachedData.filter(ev => !deleted_events.includes(ev.id));
+        updated_events.forEach(update => {
+          const idx = mergedData.findIndex(e => e.id === update.event_id);
+          const mappedUpdate = {
+            id: update.event_id,
+            title: update.event_name,
+            start: update.start_time,
+            end: update.end_time,
+            description: update.description,
+            participants: update.participants,
+            status: update.status || "approved",
+            version: update.version || 0
+          };
+          if (idx >= 0) {
+            mergedData[idx] = { ...mergedData[idx], ...mappedUpdate };
+          } else {
+            mergedData.push(mappedUpdate);
+          }
+        });
+
+        // Save back to cache
+        calendarCache.set(groupId, mergedData, cachedObj.ttl);
+
+        // Update redux store
+        dispatch({
+          type: fetchEvents.fulfilled.type,
+          payload: { groupId, events: mergedData, fromCache: true }
+        });
+
+        successCallback(mergedData);
+        return;
+      }
+
+      // 2️⃣ No cache — fetch full events
+      const res = await fetch(`http://127.0.0.1:5000/api/groups/${groupId}/events`, {
+        credentials: "include"
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to fetch events");
+
+      const mapped = data.events.map(ev => ({
+        id: ev.event_id,
+        title: ev.event_name,
+        start: ev.start_time,
+        end: ev.end_time,
+        description: ev.description,
+        participants: ev.participants,
+        status: ev.status || "approved",
+        version: ev.version || 0
+      }));
+
+      calendarCache.set(groupId, mapped);
+
+      // Update redux store
+      dispatch({
+        type: fetchEvents.fulfilled.type,
+        payload: { groupId, events: mapped, fromCache: false }
+      });
+
+      successCallback(mapped);
+
+    } catch (err) {
+      console.error("FullCalendar event loader error:", err);
+      failureCallback(err);
+    }
+  };
+};

@@ -201,6 +201,28 @@ export default function CalendarPage() {
                 bootstrap5Plugin,
               ]}
               initialView="dayGridMonth"
+              // eventSources={[
+              //   {
+              //     events: function(fetchInfo, successCallback, failureCallback) {
+              //       // Check Redux store for cached group events
+              //       const cached = calendarCache.get(selectedGroup);
+
+              //       if (cached) {
+              //         successCallback(cached.data);
+              //         // Optionally still check server for updates
+              //       } else {
+              //         fetch(`http://127.0.0.1:5000/api/groups/${selectedGroup}/events`)
+              //           .then(r => r.json())
+              //           .then(data => {
+              //             calendarCache.set(selectedGroup, data);
+              //             successCallback(data);
+              //           })
+              //           .catch(failureCallback);
+              //       }
+              //     }
+              //   }
+              // ]}
+              events={events} // Redux-driven array
               timeZone="UTC"
               themeSystem="bootstrap5"
               headerToolbar={{
@@ -226,7 +248,6 @@ export default function CalendarPage() {
               selectable={permission !== "Viewer"}
               nowIndicator={true}
               editable={permission !== "Viewer"}
-              events={events}
               dateClick={permission !== "Viewer" ? handleDateClick : null}
               eventClick={handleEventClick}
               eventDidMount={handleEventDidMount}
