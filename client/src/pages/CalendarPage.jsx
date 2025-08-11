@@ -12,10 +12,9 @@ import "bootstrap-icons/font/bootstrap-icons.min.css";
 import "bootstrap/dist/js/bootstrap.bundle.min.js";
 import "../styles/calendar.css";
 
-import CreateGroupModal from "../components/CreateGroupModal";
+import GroupSettingsModal from "../components/GroupSettingsModal";
 import AppLayout from "../components/AppLayout";
 import { useFlash } from "../context/FlashContext";
-
 import ParticipantsList from '../components/ParticipantsList'; 
 
 import { useDispatch, useSelector } from "react-redux";
@@ -33,6 +32,7 @@ export default function CalendarPage() {
 
   const [groups, setGroups] = useState([]);
   const [selectedGroup, setSelectedGroup] = useState(1);
+  
   const events = useSelector((state) =>
     selectEventsByGroup(state, selectedGroup)
   );
@@ -43,9 +43,18 @@ export default function CalendarPage() {
 
   const [showAddModal, setShowAddModal] = useState(false);
   const [showViewModal, setShowViewModal] = useState(false);
-  const [showCreateGroupModal, setShowCreateGroupModal] = useState(false);
-
+  const [showGroupSettingsModal, setShowGroupSettingsModal] = useState(false);
   const { addFlashMessage } = useFlash(); 
+
+  const openGroupSettingsModal = (groupId) => {
+    setSelectedGroup(groupId);
+    setShowGroupSettingsModal(true);
+  };
+
+  const closeGroupSettingsModal = () => {
+    setShowGroupSettingsModal(false);
+    setSelectedGroup(1);
+  };
 
   const [newEvent, setNewEvent] = useState({
     title: "",
@@ -286,7 +295,7 @@ export default function CalendarPage() {
               </select>
               <button
                 className="btn btn-outline-secondary"
-                onClick={() => setShowCreateGroupModal(true)}
+                onClick={() => setShowGroupSettingsModal(true)}
               >
                 <i className="bx bx-cog"></i> Group Settings
               </button>
@@ -359,10 +368,12 @@ export default function CalendarPage() {
           )}
         </div>
 
-        <CreateGroupModal
-          show={showCreateGroupModal}
-          onClose={() => setShowCreateGroupModal(false)}
+        <GroupSettingsModal
+          show={showGroupSettingsModal}
+          onClose={closeGroupSettingsModal}
+          groupId={selectedGroup}
         />
+
 
         {/* Add Event Modal */}
         {showAddModal && (
