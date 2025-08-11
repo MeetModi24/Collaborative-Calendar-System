@@ -85,7 +85,7 @@ export default function CalendarPage() {
     if (!selectedGroup) return;
     dispatch(fetchEvents(selectedGroup)); // ✅ Redux-managed caching
 
-    fetch(`/api/groups/get_group_permission/${selectedGroup}`, {
+    fetch(`http://127.0.0.1:5000/api/groups/get_group_permission/${selectedGroup}`, {
       credentials: "include",
     })
       .then((res) => res.json())

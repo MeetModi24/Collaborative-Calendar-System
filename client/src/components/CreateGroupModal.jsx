@@ -49,7 +49,7 @@ export default function ProfileSettingsModal({ show, onClose }) {
   useEffect(() => {
     if (show) {
       setLoading(true);
-      fetch("/user_profile", {
+      fetch("http://127.0.0.1:5000/api/auth/user_profile", {
         method: "GET",
         credentials: "include",
         headers: {
@@ -109,7 +109,7 @@ export default function ProfileSettingsModal({ show, onClose }) {
 
     setSubmitting(true);
 
-    fetch("/user_profile", {
+    fetch("http://127.0.0.1:5000/api/auth/user_profile", {
       method: "POST",
       credentials: "include",
       headers: { "Content-Type": "application/json" },
