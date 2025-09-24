@@ -1,0 +1,36 @@
+<!-- Navbar -->
+<div class="navbar">
+    <div class="navbar-brand">Event Management System</div>
+    <ul class="navbar-nav">
+        {% if current_user.is_authenticated %}
+        <li>
+            <a href="https://meet.google.com" target="_blank" rel="noopener noreferrer" title="Google Meet">
+                <i class="bx bxs-video" style="font-size: x-large;"></i>
+            </a>
+        </li>
+        <li class="Notification">
+            <a role="button" data-bs-toggle="popover" data-bs-container="body" data-bs-trigger="focus"
+                data-bs-placement="bottom" id="notificationBtn">
+                <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" fill="currentColor"
+                    class="bi bi-bell-fill" viewBox="0 0 18 18">
+                    <path
+                        d="M8 16a2 2 0 0 0 2-2H6a2 2 0 0 0 2 2m.995-14.901a1 1 0 1 0-1.99 0A5 5 0 0 0 3 6c0 1.098-.5 6-2 7h14c-1.5-1-2-5.902-2-7 0-2.42-1.72-4.44-4.005-4.901" />
+                </svg>
+                <span class="top-0 start-100 translate-middle badge rounded-pill bg-danger d-none"
+                    id="notificationBadge">
+                    <span class="visually-hidden">unread notifications</span>
+                </span>
+            </a>
+            <div class="notification-popover shadow d-none" id="notificationPopover">
+                <h6 class="border-bottom p-3 mb-0" id="Notification-Header">Notifications</h6>
+                <div class="notification-list" id="notificationList"></div>
+            </div>
+        </li>
+        <li><a href="{{ url_for('signout') }}" id="signout-navbar">SignOut</a></li>
+        {% else %}
+        <li><a href="{{ url_for('base') }}">Home</a></li>
+        <li><a href="{{ url_for('signup') }}">SignUp</a></li>
+        <li><a href="{{ url_for('signin') }}">SignIn</a></li>
+        {% endif %}
+    </ul>
+</div>

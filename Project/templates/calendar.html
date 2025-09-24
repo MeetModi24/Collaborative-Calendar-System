@@ -1,0 +1,412 @@
+{% extends 'base.html' %}
+
+{% block extra_header %}
+<!-- FullCalender JS -->
+<script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js'></script>
+
+<link href='https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css' rel='stylesheet'>
+<script src='https://cdn.jsdelivr.net/npm/@fullcalendar/bootstrap5@6.1.15/index.global.min.js'></script>
+
+<link rel="stylesheet" href="{{ url_for('static',filename='css/calendar.css') }}" />
+{% endblock %}
+
+{% block content %}
+<!-- In your template -->
+<meta name="user-id" content="{{ current_user.user_id }}">
+<meta name="user-name" content="{{ current_user.name }}">
+<meta name="user-email" content="{{ current_user.email }}">
+
+<!-- Bootstrap Modal -->
+<div class="p-5">
+	<div class="calendar-container">
+		<header class="calendar-header">
+			<h1>CALENDAR</h1>
+			<div class="search-bar">
+				<select id="group-select">
+					<option id="group-select-option-1" value="1">Dashboard</option>
+					{% for group in groups %}
+					<option id="group-select-option-{{ group.group_id }}" value="{{ group.group_id }}">{{
+						group.group_name }}</option>
+					{% endfor %}
+				</select>
+				<a id="group-settings"><i class="bx bx-cog" class="settings-icon"></i>Group Settings</a>
+			</div>
+		</header>
+		<div id="calendar"></div>
+	</div>
+</div>
+
+<div id='script-warning'>
+	Error getting data from <code>/data</code> endpoint.
+</div>
+
+<!-- calendar modal -->
+<div id="modal-view-event" class="modal modal-top fade calendar-modal">
+	<div class="modal-dialog modal-dialog-centered">
+		<div class="modal-content">
+			<div class="modal-header" style="justify-content: space-between;">
+				<h4 class="modal-title" style="max-width: 95%;">
+					<span class="event-icon"></span>
+					<span class="event-title" style="max-width: 95%; overflow-wrap: break-word;"
+						id="model-view-title-editable" contenteditable="true"></span>
+				</h4>
+				<button type="button" data-bs-dismiss="modal" id="closeViewEvent">×</button>
+			</div>
+			<div class="modal-body">
+				<div class="description" style="display: flex; margin-bottom: 1.5rem;">
+					<span className="icon"><i class="bx bx-calendar"></i></span>
+					<div class="event-body" id="model-view-description-editable" contenteditable="true"
+						style="margin-left: 5px; max-width: 95%; min-width: 95%; overflow-wrap: break-word; white-space: pre-wrap;"
+						onfocus="this.textContent === 'No description available' && (this.textContent = '')"
+						onblur="!this.textContent.trim() && (this.textContent = 'No description available')"></div>
+				</div>
+
+				<!-- Date/Time Section -->
+				<div class="datetime-section" style="margin-bottom: 1.5rem;">
+					<div style="display: flex;">
+						<span class="icon"><i class="bx bx-time"></i></span>
+						<h5 style="margin-left: 5px;">Event Time</h5>
+					</div>
+					<div class="datetime-row" style="display: flex; margin-bottom: 0.5rem; margin-left: 1rem;">
+						<div style="margin-left: 5px; display: flex; gap: 10px; flex-wrap: wrap;">
+							<div>
+								<label style="display: block; font-size: 0.8rem; color: #666;">Start Date</label>
+								<input type="date" id="view-event-start-date" class="form-control" style="width: 100%;">
+							</div>
+							<div>
+								<label style="display: block; font-size: 0.8rem; color: #666;">Start Time</label>
+								<input type="time" id="view-event-start-time" class="form-control" style="width: 100%;">
+							</div>
+						</div>
+					</div>
+					<div class="datetime-row" style="display: flex; margin-left: 1rem;">
+						<div style="margin-left: 5px; display: flex; gap: 10px; flex-wrap: wrap;">
+							<div>
+								<label style="display: block; font-size: 0.8rem; color: #666;">End Date</label>
+								<input type="date" id="view-event-end-date" class="form-control" style="width: 100%;">
+								<div class="invalid-feedback"></div>
+							</div>
+							<div>
+								<label style="display: block; font-size: 0.8rem; color: #666;">End Time</label>
+								<input type="time" id="view-event-end-time" class="form-control" style="width: 100%;">
+								<div class="invalid-feedback"></div>
+							</div>
+						</div>
+					</div>
+				</div>
+				<!-- Participants Section -->
+				<div id="participants-section" class="mt-2">
+					<div class="participantHeader" style="display: flex;">
+						<span className="icon"><i class="bx bx-group"></i></span>
+						<h5 style="margin-left: 5px;">Participants</h5>
+					</div>
+					<div id="participants-list" class="flex-wrap mt-1"></div>
+				</div>
+				<div class="modal-view-add-participant" id="modal-view-add-participant-select">
+					<select type="email" id="updateParticipantSelect" placeholder="Email"
+						class="modal-view-participant-select">
+						<option value="" disabled selected>Select a participant</option>
+					</select>
+					<button id="modal-view-add-participant" class="modal-view-add-button">Add Participant</button>
+				</div>
+			</div>
+			<div class="modal-footer">
+				<button type="submit" class="btn btn-primary" id="saveViewEvent">Save Changes</button>
+				<button type="submit" class="btn btn-primary" id="removeEvent">Remove Event</button>
+				<button type="button" class="btn btn-primary" data-bs-dismiss="modal"
+					id="modalCloseViewEvent">Close</button>
+			</div>
+		</div>
+	</div>
+</div>
+<style>
+	.calendar-container {
+		background: white;
+		border-radius: 1rem;
+		box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+		max-width: 1000px;
+		margin: 0 auto;
+		padding: 2rem;
+	}
+
+	.calendar-header {
+		display: flex;
+		flex-direction: column;
+		gap: 1rem;
+		margin-bottom: 2rem;
+	}
+
+	.calendar-header h6 {
+		color: var(#1a365d);
+		font-size: 1.5rem;
+		font-weight: 600;
+	}
+
+	.search-bar {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		gap: 1rem;
+	}
+
+	#group-select {
+		flex: 1;
+		padding: 0.75rem 1rem;
+		border: 1px solid var(#e2e8f0);
+		border-radius: 0.5rem;
+		font-size: 1rem;
+	}
+
+	#group-settings {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		color: var(#2d3748);
+		cursor: pointer;
+		font-size: 1.1rem;
+	}
+
+	.settings-icon {
+		font-size: 1.2rem;
+	}
+
+	#closeViewEvent {
+		font-size: 1.5rem;
+		color: #6b7280;
+		background: none;
+		border: none;
+		cursor: pointer;
+		padding: 0.5rem;
+	}
+
+	#closeAddEvent {
+		font-size: 1.5rem;
+		color: #6b7280;
+		background: none;
+		border: none;
+		cursor: pointer;
+		padding: 0.5rem;
+	}
+
+	#closeViewEvent:hover {
+		color: #374151;
+	}
+
+	#closeAddEvent:hover {
+		color: #374151;
+	}
+
+	.event-body {
+		font-size: 0.875rem;
+		color: #212529;
+	}
+
+	.no-description {
+		color: #6b7280;
+	}
+
+	.status-section {
+		margin: 0.2rem 0;
+		padding: 0.4rem;
+		border-radius: 6px;
+	}
+
+	.status-section h4 {
+		margin-top: 4px;
+		font-size: 1.2rem;
+		color: #333;
+	}
+
+	.accepted {
+		background-color: #f0fdf4;
+		border: 1px solid #86efac;
+	}
+
+	.declined {
+		background-color: #fef2f2;
+		border: 1px solid #fecaca;
+	}
+
+	.pending {
+		background-color: #fefce8;
+		border: 1px solid #fef08a;
+	}
+
+	#participants-list {
+		display: flex;
+		flex-direction: column;
+		padding-left: 1rem;
+	}
+
+	.participant {
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+		padding: 0.5rem;
+		border-radius: 0.5rem;
+		transition: background-color 0.2s;
+	}
+
+	.participant:hover {
+		background-color: #f8f9fa;
+	}
+
+	.avatar {
+		width: 2.5rem;
+		height: 2.5rem;
+		border-radius: 50%;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		color: white;
+		font-weight: 600;
+		font-size: 0.875rem;
+		flex-shrink: 0;
+	}
+
+	.participant-info {
+		display: flex;
+		flex-direction: column;
+		flex-grow: 1;
+	}
+
+	.participant-info .name {
+		margin: 0;
+		font-weight: 500;
+		font-size: 0.875rem;
+		color: #212529;
+	}
+
+	.participant-info .email {
+		margin: 0;
+		font-size: 0.75rem;
+		color: #6b7280;
+	}
+
+	.text-muted {
+		padding-left: 0.7rem;
+		color: #6b7280 !important;
+		font-size: 14px;
+	}
+
+	.modal-view-add-participant {
+		margin-top: 1rem;
+		display: flex;
+		gap: 0.5rem;
+		padding-left: 1.6rem;
+		font-size: 0.84rem;
+	}
+
+	.modal-view-participant-select {
+		padding: 0.5rem;
+		border: 1px solid #e5e7eb;
+		border-radius: 6px;
+		flex-grow: 1;
+		font-size: 0.84rem;
+	}
+
+	.modal-view-save-button {
+		background: #1e40af;
+		color: white;
+		padding: 0.5rem 1rem;
+		border-radius: 6px;
+		font-weight: 500;
+		transition: background-color 0.2s;
+	}
+
+	.modal-view-save-button:hover {
+		background: #1e3a8a;
+	}
+
+	.modal-view-add-button {
+		background: #059669;
+		color: white;
+		padding: 0.5rem 1rem;
+		border-radius: 6px;
+		font-weight: 500;
+		transition: background-color 0.2s;
+	}
+
+	.modal-view-participant-remove-button {
+		background: #dc2626;
+		color: white;
+		padding: 0.25rem 0.5rem;
+		border-radius: 4px;
+		font-size: 0.875rem;
+	}
+
+	.modal-view-participant-remove-button:hover {
+		background: #b91c1c;
+	}
+
+	#model-view-description-editable:focus {
+		outline: 2px solid #3b82f6;
+		border-radius: 4px;
+		padding: 2px;
+	}
+
+	#model-view-title-editable:focus {
+		outline: 2px solid #3b82f6;
+		border-radius: 4px;
+		padding: 2px;
+	}
+</style>
+
+<div id="modal-view-event-add" class="modal modal-top fade calendar-modal">
+	<div class="modal-dialog modal-dialog-centered">
+		<div class="modal-content">
+			<form id="add-event">
+				<div class="modal-header" style="justify-content: space-between;">
+					<h4 class="modal-title">Create New Event</h4>
+					<button type="button" data-bs-dismiss="modal" id="closeAddEvent">×</button>
+				</div>
+				<div class="modal-body">
+					<div class="form-group">
+						<label>Event name</label>
+						<input type="text" class="form-control" name="ename" id="eventTitle"
+							placeholder="Enter name of event">
+						<div class="invalid-feedback"></div>
+					</div>
+					<div class="form-group">
+						<label>Start Date</label>
+						<input type="datetime-local" class="form-control" name="edate" id="eventStart" required>
+						<div class="invalid-feedback"></div>
+					</div>
+					<div class="form-group">
+						<label>End Date</label>
+						<input type="datetime-local" class="form-control" name="edate" id="eventEnd" required>
+						<div class="invalid-feedback"></div>
+					</div>
+					<div class="form-group">
+						<label>Event Description</label>
+						<textarea class="form-control" name="edesc" id="eventDescription" rows="6"
+							style="min-height: 100px; resize: vertical;"
+							placeholder="Enter event description"></textarea>
+					</div>
+					<div class="form-group" id="participants">
+						<label>Participants</label>
+						<div class="input-group mb-2">
+							<select class="form-control" id="participantSelect" placeholder="Enter email">
+								<option></option>
+							</select>
+							<button class="btn btn-light" type="button" id="addParticipantBtn"
+								style="color:rgb(30, 18, 82);">
+								<i class="bi bi-people-fill"></i> Select
+							</button>
+						</div>
+						<div id="eventParticipantsList" class="d-flex flex-wrap gap-2"></div>
+						<div class="invalid-feedback"></div>
+					</div>
+				</div>
+				<div class="modal-footer">
+					<button type="button" class="btn btn-primary" data-bs-dismiss="modal"
+						onclick="(() => { document.getElementById('add-event').reset() })()">Cancel</button>
+					<button type="submit" class="btn btn-primary" id="saveEvent">Create Event</button>
+				</div>
+			</form>
+		</div>
+	</div>
+</div>
+
+<script src="{{ url_for ('static',filename='js/calendar.js') }}"></script>
+{% endblock %}

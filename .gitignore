@@ -1,1 +1,5 @@
-instance/event_management.db
+env
+__pycache__
+.hintrc
+instance
+event_management.db
