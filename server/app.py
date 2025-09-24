@@ -10,8 +10,12 @@ def create_app():
     app.config.from_object(Config)
 
     # Enable CORS so React frontend can talk to Flask API
+<<<<<<< HEAD
     # Update origins as needed for production
     CORS(app, supports_credentials=True, origins=["http://localhost:3000"])
+=======
+    CORS(app, supports_credentials=True, origins=["http://127.0.0.1:3000"])  # update for production domain if needed
+>>>>>>> 2b66d1c2f396569dbc2fac0d16d8629d2541c27b
 
     # Initialize extensions
     db.init_app(app)
@@ -33,8 +37,16 @@ def create_app():
     # Register Blueprints
     from .routes.auth_routes import auth_bp
     from .routes.notification_routes import notification_bp
+<<<<<<< HEAD
 
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(notification_bp, url_prefix='/api/notifications')
+=======
+    from .routes.group_routes import group_bp
+
+    app.register_blueprint(auth_bp, url_prefix='/api/auth')
+    app.register_blueprint(notification_bp, url_prefix='/api/notifications')
+    app.register_blueprint(group_bp, url_prefix='/api/groups')
+>>>>>>> 2b66d1c2f396569dbc2fac0d16d8629d2541c27b
 
     return app

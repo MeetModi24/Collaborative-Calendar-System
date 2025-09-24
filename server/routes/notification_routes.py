@@ -1,7 +1,9 @@
-from flask import Blueprint, jsonify
+
+from flask import Blueprint, jsonify, request
 from flask_login import login_required, current_user
-from sqlalchemy import func
-from ..models import db, Member, Participate, Group, Event, User
+from sqlalchemy import func, update
+from server.models import db, Member, Participate, Group, Event, User
+from ..utils import human_readable_delta
 
 notification_bp = Blueprint('notification', __name__)
 

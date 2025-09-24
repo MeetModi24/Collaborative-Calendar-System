@@ -1,33 +1,37 @@
 // src/context/AuthContext.jsx
-import React, { createContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect } from "react";
+import { clearAllCache } from "../slices/eventsSlice";
+import { useDispatch } from "react-redux";
+import { useFlash } from "./FlashContext"; // use global flash system
 
-// Create context
 export const AuthContext = createContext();
 
-// Create provider component
 export const AuthProvider = ({ children }) => {
   const [currentUser, setCurrentUser] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [inviteCount, setInviteCount] = useState(0);
   const [loading, setLoading] = useState(true);
 
+  const dispatch = useDispatch();
+  const { addFlashMessage } = useFlash(); //  comes from FlashContext
+
   useEffect(() => {
     const fetchAuthStatus = async () => {
       try {
-        const response = await fetch('/api/auth/status', {
-          credentials: 'include',
+        const response = await fetch("/api/auth/status", {
+          credentials: "include",
         });
         const data = await response.json();
 
         if (data.isAuthenticated) {
-          setCurrentUser({ name: data.name });
+          setCurrentUser({ name: data.name, email: data.email });
           setIsAuthenticated(true);
         } else {
           setCurrentUser(null);
           setIsAuthenticated(false);
         }
       } catch (error) {
-        console.error('Error fetching auth status:', error);
+        console.error("Error fetching auth status:", error);
       } finally {
         setLoading(false);
       }
@@ -39,39 +43,53 @@ export const AuthProvider = ({ children }) => {
   // 🔒 Logout Function
   const logout = async () => {
     try {
-      await fetch('/api/auth/logout', {
-        method: 'POST',
-        credentials: 'include',
+      await fetch("/api/auth/logout", {
+        method: "POST",
+        credentials: "include",
       });
+
       setCurrentUser(null);
       setIsAuthenticated(false);
+
+      //  Clear Redux event cache
+      dispatch(clearAllCache());
+
+      addFlashMessage("success", "You have been logged out.");
     } catch (error) {
-      console.error('Logout failed:', error);
+      console.error("Logout failed:", error);
+      addFlashMessage("danger", "Logout failed. Try again.");
     }
   };
 
-  // 🛠 Profile Update Function
   const updateProfile = async ({ name, email, password }) => {
     try {
-        const res = await fetch('/api/auth/user_profile', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
+      const res = await fetch("/api/auth/user_profile", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ name, email, password }),
-        });
+      });
 
-        if (res.ok) {
+      if (res.ok) {
         setCurrentUser((prev) => ({ ...prev, name, email }));
+        addFlashMessage("success", "Profile updated successfully.");
         return { success: true };
-        } else {
+      } else {
         const error = await res.json();
-        return { success: false, error: error.error || 'Update failed' };
-        }
+        addFlashMessage("danger", error.error || "Update failed.");
+        return { success: false, error: error.error || "Update failed" };
+      }
     } catch (err) {
-        return { success: false, error: err.message };
+      addFlashMessage("danger", err.message);
+      return { success: false, error: err.message };
     }
-    };
+  };
 
+  const login = (userData) => {
+    setCurrentUser(userData);
+    setIsAuthenticated(true);
+    addFlashMessage("success", "Logged in successfully!");
+  };
 
   return (
     <AuthContext.Provider
@@ -80,6 +98,7 @@ export const AuthProvider = ({ children }) => {
         isAuthenticated,
         inviteCount,
         setInviteCount,
+        login,
         logout,
         updateProfile,
         loading,
@@ -89,3 +108,5 @@ export const AuthProvider = ({ children }) => {
     </AuthContext.Provider>
   );
 };
+
+export const useAuth = () => useContext(AuthContext);
