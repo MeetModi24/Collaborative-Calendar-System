@@ -1,4 +1,3 @@
-// src/components/Sidebar.jsx
 import React, { useContext } from 'react';
 import { Link } from 'react-router-dom';
 import { FaBars } from 'react-icons/fa';
@@ -15,10 +14,11 @@ export default function Sidebar({
     currentUser,
     isAuthenticated,
     logout,
+    inviteCount
   } = useContext(AuthContext);
 
   const navItemClass =
-    'sidebar-item d-flex align-items-center text-white px-3 py-2 text-decoration-none';
+    'sidebar-item d-flex align-items-center text-white px-3 py-2 text-decoration-none position-relative';
 
   return (
     <div
@@ -74,12 +74,33 @@ export default function Sidebar({
             {!collapsed && <span>Create Group</span>}
           </button>
 
+          {/* Invites button with badge */}
           <button
-            onClick={onInvitesClick}
+            onClick={() => {
+              if (isAuthenticated) {
+                onInvitesClick();
+              }
+            }}
             className={`${navItemClass} bg-transparent border-0 text-start w-100`}
+            disabled={!isAuthenticated}
           >
             <i className="bx bx-envelope fs-5 me-2" />
             {!collapsed && <span>Invites</span>}
+
+            {inviteCount > 0 && (
+              <span
+                className="badge bg-danger rounded-pill position-absolute top-0 end-0 translate-middle"
+                style={{
+                  fontSize: '0.7rem',
+                  padding: '0.3em 0.5em',
+                  transform: collapsed
+                    ? 'translate(50%, -50%)'
+                    : 'translate(25%, -50%)'
+                }}
+              >
+                {inviteCount}
+              </span>
+            )}
           </button>
 
           <button
@@ -99,7 +120,9 @@ export default function Sidebar({
             <i className="bx bx-user-circle fs-4" />
             {!collapsed && (
               <>
-                <span className="fw-semibold ms-2">{currentUser?.name || 'User'}</span>
+                <span className="fw-semibold ms-2">
+                  {currentUser?.name || 'User'}
+                </span>
                 <button
                   className="btn text-white p-0 ms-auto"
                   title="Sign out"
